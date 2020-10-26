@@ -1,3 +1,4 @@
 build
 .env
 bridgeDeploymentResults.json
+.env.MULTI_AMB_ERC_TO_ERC

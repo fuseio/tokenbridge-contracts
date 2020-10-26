@@ -208,7 +208,7 @@ contract HomeMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677, HomeFeeManager
     */
     function homeTokenAddress(address _foreignToken) public view returns (address) {
         return addressStorage[keccak256(abi.encodePacked("homeTokenAddress", _foreignToken))];
-    }homeTokenAddress
+    }
 
     /**
     * @dev Retrieves address of the foreign bridged token contract associated with a specific home token contract.
