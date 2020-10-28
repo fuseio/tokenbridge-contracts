@@ -24,6 +24,7 @@ const {
   DEPLOYMENT_ACCOUNT_PRIVATE_KEY,
   FOREIGN_REWARDABLE,
   DEPLOY_REWARDABLE_TOKEN,
+  BRIDGEABLE_TOKEN_ADDRESS,
   BRIDGEABLE_TOKEN_NAME,
   BRIDGEABLE_TOKEN_SYMBOL,
   BRIDGEABLE_TOKEN_DECIMALS,
@@ -74,14 +75,21 @@ async function deployForeign() {
   const erc677Contract = DEPLOY_REWARDABLE_TOKEN ? ERC677BridgeTokenRewardable : ERC677BridgeTokenPermittable
   const chainId = await web3Foreign.eth.getChainId()
   assert.strictEqual(chainId > 0, true, 'Invalid chain ID')
-  const args = [BRIDGEABLE_TOKEN_NAME, BRIDGEABLE_TOKEN_SYMBOL, BRIDGEABLE_TOKEN_DECIMALS, chainId]
-  const erc677token = await deployContract(
-    erc677Contract,
-    args,
-    { from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce }
-  )
-  nonce++
-  console.log('[Foreign] Bridgeable Token: ', erc677token.options.address)
+
+  let erc677token
+  if (BRIDGEABLE_TOKEN_ADDRESS) {
+    erc677token = new web3Foreign.eth.Contract(ERC677BridgeTokenPermittable.abi, BRIDGEABLE_TOKEN_ADDRESS)
+  } else {
+    const args = [BRIDGEABLE_TOKEN_NAME, BRIDGEABLE_TOKEN_SYMBOL, BRIDGEABLE_TOKEN_DECIMALS, chainId]
+    erc677token = await deployContract(
+      erc677Contract,
+      args,
+      { from: DEPLOYMENT_ACCOUNT_ADDRESS, network: 'foreign', nonce }
+    )
+    nonce++
+    console.log('[Foreign] Bridgeable Token: ', erc677token.options.address)
+  }
+ 
 
   console.log('\n[Foreign] Set Bridge Mediator contract on Bridgeable token')
   await setBridgeContract({
