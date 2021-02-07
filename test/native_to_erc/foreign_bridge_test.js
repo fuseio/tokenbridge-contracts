@@ -155,6 +155,19 @@ contract('ForeignBridge', async accounts => {
         otherSideBridgeAddress
       ).should.be.rejected
 
+      // not valid otherSideBridgeAddress
+      await foreignBridge.initialize(
+        validatorContract.address,
+        token.address,
+        [oneEther, halfEther, minPerTx],
+        gasPrice,
+        requireBlockConfirmations,
+        [homeDailyLimit, homeMaxPerTx],
+        owner,
+        '9',
+        ZERO_ADDRESS
+      ).should.be.rejected
+
       const { logs } = await foreignBridge.initialize(
         validatorContract.address,
         token.address,
@@ -1170,6 +1183,25 @@ contract('ForeignBridge', async accounts => {
 
       // Then
       expect(await foreignBridge.getHomeFee()).to.be.bignumber.equals(newHomeFee)
+    })
+
+    it('should return zero parameters for zero fee manager', async () => {
+      // When
+      await foreignBridge.initialize(
+        validatorContract.address,
+        token.address,
+        [oneEther, halfEther, minPerTx],
+        gasPrice,
+        requireBlockConfirmations,
+        [homeDailyLimit, homeMaxPerTx],
+        owner,
+        decimalShiftZero,
+        otherSideBridgeAddress
+      )
+
+      // Then
+      expect(await foreignBridge.getFeeManagerMode()).to.be.equal('0x00000000')
+      expect(await foreignBridge.getHomeFee()).to.be.bignumber.equal(ZERO)
     })
 
     it('should be able to get fee manager mode', async () => {

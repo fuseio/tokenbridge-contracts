@@ -58,7 +58,7 @@ contract BasicMultiAMBErc20ToErc677 is
     * @return patch value of the version
     */
     function getBridgeInterfacesVersion() external pure returns (uint64 major, uint64 minor, uint64 patch) {
-        return (1, 1, 1);
+        return (1, 2, 0);
     }
 
     /**
@@ -75,8 +75,9 @@ contract BasicMultiAMBErc20ToErc677 is
     * @param _token address of claimed token, address(0) for native
     * @param _to address of tokens receiver
     */
-    function claimTokens(address _token, address _to) external onlyIfUpgradeabilityOwner validAddress(_to) {
-        require(_token == address(0) || !isTokenRegistered(_token)); // native coins or token not registered
+    function claimTokens(address _token, address _to) external onlyIfUpgradeabilityOwner {
+        // Only unregistered tokens and native coins are allowed to be claimed with the use of this function
+        require(_token == address(0) || !isTokenRegistered(_token));
         claimValues(_token, _to);
     }
 

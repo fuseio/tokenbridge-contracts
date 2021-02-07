@@ -97,7 +97,8 @@ contract('HomeMultiAMBErc20ToErc677', async accounts => {
 
   async function bridgeToken(token, value = oneEther, forceFail = false) {
     await token.mint(user, value).should.be.fulfilled
-    const { receipt } = await token.transfer(otherSideMediator.address, value, { from: user }).should.be.fulfilled
+    const { receipt } = await token.transferAndCall(otherSideMediator.address, value, '0x', { from: user }).should.be
+      .fulfilled
     const encodedData = strip0x(
       web3.eth.abi.decodeParameters(
         ['bytes'],
@@ -416,6 +417,34 @@ contract('HomeMultiAMBErc20ToErc677', async accounts => {
         expect(await homeToken.name()).to.be.equal('TEST on xDai')
         expect(await homeToken.symbol()).to.be.equal('TEST')
         expect(await homeToken.decimals()).to.be.bignumber.equal('18')
+      })
+
+      it('should not register new token with empty name and empty symbol', async () => {
+        const data1 = await contract.contract.methods
+          .deployAndHandleBridgedTokens(accounts[0], '', '', 18, user, oneEther.toString(10))
+          .encodeABI()
+        await ambBridgeContract.executeMessageCall(
+          contract.address,
+          otherSideMediator.address,
+          data1,
+          exampleMessageId,
+          2000000
+        ).should.be.fulfilled
+
+        expect(await ambBridgeContract.messageCallStatus(exampleMessageId)).to.be.equal(false)
+
+        const data2 = await contract.contract.methods
+          .deployAndHandleBridgedTokens(accounts[1], 'TEST', '', 18, user, oneEther.toString(10))
+          .encodeABI()
+        await ambBridgeContract.executeMessageCall(
+          contract.address,
+          otherSideMediator.address,
+          data2,
+          otherMessageId,
+          2000000
+        ).should.be.fulfilled
+
+        expect(await ambBridgeContract.messageCallStatus(otherMessageId)).to.be.equal(true)
       })
 
       for (const decimals of [3, 18, 20]) {
@@ -966,6 +995,62 @@ contract('HomeMultiAMBErc20ToErc677', async accounts => {
         })
       }
     })
+
+    describe('oracle driven lane permissions', () => {
+      it('should allow to set/update lane permissions', async () => {
+        expect(await contract.destinationLane(token.address, user, user2)).to.be.bignumber.equal('0')
+
+        await contract.setTokenForwardingRule(token.address, true, { from: user }).should.be.rejected
+        await contract.setTokenForwardingRule(token.address, true, { from: owner }).should.be.fulfilled
+
+        expect(await contract.destinationLane(token.address, user, user2)).to.be.bignumber.equal('-1')
+
+        await contract.setSenderExceptionForTokenForwardingRule(token.address, user, true, { from: user }).should.be
+          .rejected
+        await contract.setSenderExceptionForTokenForwardingRule(token.address, user, true, { from: owner }).should.be
+          .fulfilled
+
+        expect(await contract.destinationLane(token.address, user, user2)).to.be.bignumber.equal('1')
+        expect(await contract.destinationLane(token.address, user2, user2)).to.be.bignumber.equal('-1')
+
+        await contract.setSenderExceptionForTokenForwardingRule(token.address, user, false, { from: owner }).should.be
+          .fulfilled
+        await contract.setReceiverExceptionForTokenForwardingRule(token.address, user, true, { from: user }).should.be
+          .rejected
+        await contract.setReceiverExceptionForTokenForwardingRule(token.address, user, true, { from: owner }).should.be
+          .fulfilled
+
+        expect(await contract.destinationLane(token.address, user, user)).to.be.bignumber.equal('1')
+        expect(await contract.destinationLane(token.address, user, user2)).to.be.bignumber.equal('-1')
+
+        await contract.setTokenForwardingRule(token.address, false, { from: owner }).should.be.fulfilled
+
+        expect(await contract.destinationLane(token.address, user2, user2)).to.be.bignumber.equal('0')
+
+        await contract.setSenderForwardingRule(user2, true, { from: user }).should.be.rejected
+        await contract.setSenderForwardingRule(user2, true, { from: owner }).should.be.fulfilled
+
+        expect(await contract.destinationLane(token.address, user2, user2)).to.be.bignumber.equal('-1')
+
+        await contract.setReceiverForwardingRule(user2, true, { from: user }).should.be.rejected
+        await contract.setReceiverForwardingRule(user2, true, { from: owner }).should.be.fulfilled
+
+        expect(await contract.destinationLane(token.address, user, user2)).to.be.bignumber.equal('-1')
+      })
+
+      it('should send a message to the manual lane', async () => {
+        homeToken = await bridgeToken(token)
+
+        await homeToken.transferAndCall(contract.address, ether('0.1'), '0x', { from: user }).should.be.fulfilled
+        await contract.setTokenForwardingRule(token.address, true, { from: owner }).should.be.fulfilled
+        await homeToken.transferAndCall(contract.address, ether('0.1'), '0x', { from: user }).should.be.fulfilled
+
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
+        expect(events.length).to.be.equal(2)
+        expect(strip0x(events[0].returnValues.encodedData).slice(156, 158)).to.be.equal('00')
+        expect(strip0x(events[1].returnValues.encodedData).slice(156, 158)).to.be.equal('f0')
+      })
+    })
   })
 
   describe('fees management', () => {
@@ -1309,6 +1394,19 @@ contract('HomeMultiAMBErc20ToErc677', async accounts => {
 
         const feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
         expect(feeEvents.length).to.be.equal(2)
+      })
+
+      it('should not collect and distribute fee if sender is a reward address', async () => {
+        await token.transfer(owner, value, { from: user }).should.be.fulfilled
+
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(ZERO)
+        await token.transfer(contract.address, value, { from: owner }).should.be.fulfilled
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
+        expect(await token.balanceOf(owner)).to.be.bignumber.equal(ZERO)
+
+        const feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
+        expect(feeEvents.length).to.be.equal(0)
       })
     })
   })
