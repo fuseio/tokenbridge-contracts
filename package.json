@@ -16,7 +16,7 @@
     "lint:sol:prettier:fix": "prettier --write \"contracts/**/*.sol\"",
     "watch-tests": "./node_modules/.bin/nodemon ./node_modules/.bin/truffle test --network test",
     "coverage": "SOLIDITY_COVERAGE=true scripts/test.sh",
-    "ui:view": "solui view --spec dapp/UI.json --artifacts build/contracts",
+    "ui:view": "solui view --spec dapp/ui.json --artifacts build/contracts",
     "ui:build": "solui publish-folder --spec dapp/ui.json --artifacts build/contracts --folder build/ui"
   },
   "author": "POA network",
