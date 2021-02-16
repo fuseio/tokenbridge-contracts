@@ -45,7 +45,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -131,7 +132,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -184,7 +186,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -207,7 +210,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -250,7 +254,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -316,7 +321,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -351,7 +357,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -386,7 +393,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
@@ -421,7 +429,8 @@
                     "validation": [
                         {
                             "type": "allowedTypes",
-                            "contract": true
+                            "contract": true,
+                            "eoa" : true
                         }
                     ]
                 }
