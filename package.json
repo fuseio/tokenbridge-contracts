@@ -50,6 +50,6 @@
     "prettier-plugin-solidity": "^1.0.0-alpha.32",
     "solhint": "^2.2.0",
     "solhint-plugin-prettier": "0.0.3",
-    "@solui/cli": "^1.21.1"
+    "@solui/cli": "^1.21.2"
   }
 }
