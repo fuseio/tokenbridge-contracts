@@ -15,24 +15,6 @@
     },
     "aboutUrl": "https://fuse.io/",
     "panels": [
-        {
-			"id": "get-gas-price",
-			"title": "Get the current Gas price",
-			"execs": [{
-				"type": "call",
-				"contract": "BasicBridge",
-				"address": "@constant[contractAddress]",
-				"method": "gasPrice",
-				"saveResultAsInput": "GasPrice"
-			}],
-			"outputs": [{
-				"title": "Gas Price",
-				"type": "int",
-				"scale": "-9",
-				"unit": "gwei",
-				"value": "@input[GasPrice]"
-			}]
-        },
         
         {
             "id" : "check-if-token-registered",
@@ -108,19 +90,16 @@
                 {
                     "title": "minPerTx",
                     "type": "int",
-                    "scale": "-18",
                     "value": "@input[MinPerTx]"
                 },
                 {
                     "title": "maxPerTx",
                     "type": "int",
-                    "scale": "-18",
                     "value": "@input[MaxPerTx]"
                 },
                 {
                     "title": "Daily Limit",
                     "type": "int",
-                    "scale": "-18",
                     "value": "@input[DailyLimit]"
                 }
             ],
@@ -168,13 +147,11 @@
                 {
                     "title": "Execution Daily Limit",
                     "type": "int",
-                    "scale": "-18",
                     "value": "@input[ExecutionDailyLimit]"
                 },
                 {
                     "title": "Execution MaxPerTx",
                     "type": "int",
-                    "scale": "-18",
                     "value": "@input[ExecutionMaxPerTx]"
                 }
             ],
@@ -200,8 +177,7 @@
                 {
                     "name": "_amount",
                     "title": "Amount",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
@@ -244,8 +220,7 @@
                 {
                     "name": "_amount",
                     "title": "Amount",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
@@ -281,28 +256,6 @@
                 }
             ]
         },
-
-        {
-			"id": "set-gas-price",
-			"title": "Update Gas Price",
-			"inputs": [{
-					"name": "_gasPrice",
-					"title": "new gas price",
-					"type": "int",
-					"scale" : "9",
-					"unit" : "gwei"
-				}
-			],
-			"execs": [{
-				"type": "send",
-				"contract": "BasicBridge",
-				"address": "@constant[contractAddress]",
-				"method": "setGasPrice",
-				"args": {
-					"_gasPrice": "@input[_gasPrice]"
-				}
-			}]
-        },
         
         {
             "id": "set-daily-limit",
@@ -311,8 +264,7 @@
                 {
                     "name": "_dailyLimit",
                     "title": "new daily limit",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
@@ -347,8 +299,7 @@
                 {
                     "name": "_dailyLimit",
                     "title": "New Execution Daily Limit",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
@@ -383,8 +334,7 @@
                 {
                     "name": "_minPerTx",
                     "title": "New MinPerTx",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
@@ -419,8 +369,7 @@
                 {
                     "name": "_maxPerTx",
                     "title": "New MaxPerTx",
-                    "type": "int",
-                    "scale": "18"
+                    "type": "int"
                 },
                 {
                     "name": "_token",
