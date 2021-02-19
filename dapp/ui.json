@@ -15,7 +15,40 @@
     },
     "aboutUrl": "https://fuse.io/",
     "panels": [
-        
+        {
+            "id" : "token-decimals",
+            "title" : "Get Token Decimals",
+            "inputs" : [
+                {
+                    "name" : "_token",
+                    "title" : "Token contract address",
+                    "type": "address",
+                    "validation": [
+                        {
+                            "type": "allowedTypes",
+                            "contract": true,
+                            "eoa" : true
+                        }
+                    ]
+                }
+            ],
+            "execs" : [
+                {
+                    "type" : "call",
+                    "contract" : "DetailedERC20",
+                    "address" : "@input[_token]",
+                    "method" : "decimals",
+                    "saveResultAsInput" : "Decimals"
+                }
+            ],
+            "outputs": [
+                {
+                    "title" : "Token Decimals",
+                    "type" : "int",
+                    "value" : "@input[Decimals]"
+                }
+            ]
+        },
         {
             "id" : "check-if-token-registered",
             "title" : "Check if token is registered",
