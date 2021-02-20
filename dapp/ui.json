@@ -89,6 +89,13 @@
             "title": "View Limits [MinPerTx, MaxPerTx, Daily Limit]",
             "execs": [
                 {
+                    "type" : "call",
+                    "contract": "DetailedERC20",
+                    "address": "@input[_token]",
+                    "method": "decimals",
+                    "saveResultAsInput": "Decimals"
+                },
+                {
                     "type": "call",
                     "contract": "BasicMultiTokenBridge",
                     "address": "@constant[contractAddress]",
@@ -123,17 +130,24 @@
                 {
                     "title": "minPerTx",
                     "type": "int",
-                    "value": "@input[MinPerTx]"
+                    "value": "@input[MinPerTx]",
+                    "scaleDown" : true,
+                    "scale" : "@input[Decimals]"
                 },
                 {
                     "title": "maxPerTx",
                     "type": "int",
-                    "value": "@input[MaxPerTx]"
+                    "value": "@input[MaxPerTx]",
+                    "scaleDown" : true,
+                    "scale" : "@input[Decimals]"
                 },
                 {
                     "title": "Daily Limit",
                     "type": "int",
-                    "value": "@input[DailyLimit]"
+                    "value": "@input[DailyLimit]",
+                    "scaleDown" : true,
+                    "scale" : "@input[Decimals]"
+
                 }
             ],
             "inputs": [
@@ -155,6 +169,13 @@
             "id": "get-execution-limits",
             "title": "View Execution Limits",
             "execs": [
+                {
+                    "type" : "call",
+                    "contract": "DetailedERC20",
+                    "address": "@input[_token]",
+                    "method": "decimals",
+                    "saveResultAsInput": "Decimals"
+                },
                 {
                     "type": "call",
                     "contract": "BasicMultiTokenBridge",
@@ -180,12 +201,16 @@
                 {
                     "title": "Execution Daily Limit",
                     "type": "int",
-                    "value": "@input[ExecutionDailyLimit]"
+                    "value": "@input[ExecutionDailyLimit]",
+                    "scaleDown" : true,
+                    "scale" : "@input[Decimals]"
                 },
                 {
                     "title": "Execution MaxPerTx",
                     "type": "int",
-                    "value": "@input[ExecutionMaxPerTx]"
+                    "value": "@input[ExecutionMaxPerTx]",
+                    "scaleDown" : true,
+                    "scale" : "@input[Decimals]"
                 }
             ],
             "inputs": [
@@ -432,3 +457,4 @@
         }
     ]
 }
+
