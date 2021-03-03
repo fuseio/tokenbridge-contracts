@@ -76,15 +76,4 @@ contract SecondaryForeignMultiAMBErc20ToErc677 is ForeignMultiAMBErc20ToErc677 {
             _setTokenRegistrationMessageId(_token, _messageId);
         }
     }
-
-    /**
-    * @dev Initiate the bridge operation for some amount of tokens from msg.sender.
-    * The user should first call Approve method of the ERC677 token.
-    * @param token bridged token contract address.
-    * @param _receiver address that will receive the native tokens on the other network.
-    * @param _value amount of tokens to be transferred to the other network.
-    */
-    function registerBridgedTokens(ERC677 token, address _receiver, uint256 _value) external {
-        _relayTokens(token, _receiver, _value);
-    }
 }

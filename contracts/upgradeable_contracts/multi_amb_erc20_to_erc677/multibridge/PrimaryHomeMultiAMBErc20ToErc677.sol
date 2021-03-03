@@ -52,10 +52,6 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         emit NewTokenRegistered(_token, homeToken);
     }
 
-
-  function addTokenAddressPair(address _bridge, address _token) external onlyOwner {
-    IBridgeRegistry(_token).addBridge(_bridge);
-  }
   function addBridgePerToken(address _bridge, address _token) external onlyOwner {
     IBridgeRegistry(_token).addBridge(_bridge);
   }

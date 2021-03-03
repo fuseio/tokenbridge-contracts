@@ -95,7 +95,7 @@ contract HomeMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677, HomeFeeManager
         }
         name = string(abi.encodePacked(name, " on Fuse"));
         address homeToken = new TokenProxy(tokenImage(), name, symbol, _decimals, bridgeContract().sourceChainId());
-        IBridgeRegistry(homeToken).addBridge(address(this));
+        // IBridgeRegistry(homeToken).addBridge(address(this));
         _setTokenAddressPair(_token, homeToken);
         _initializeTokenBridgeLimits(homeToken, _decimals);
         _setFee(HOME_TO_FOREIGN_FEE, homeToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
@@ -105,13 +105,13 @@ contract HomeMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677, HomeFeeManager
         emit NewTokenRegistered(_token, homeToken);
     }
     
-    function addBridgePerToken(address _bridge, address _token) external onlyOwner {
-        IBridgeRegistry(_token).addBridge(_bridge);
-    }
+    // function addBridgePerToken(address _bridge, address _token) external onlyOwner {
+    //     IBridgeRegistry(_token).addBridge(_bridge);
+    // }
 
-    function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
-        IBridgeRegistry(_token).removeBridge(_bridge);
-    }
+    // function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
+    //     IBridgeRegistry(_token).removeBridge(_bridge);
+    // }
 
     /**
     * @dev Handles the bridged tokens. Checks that the value is inside the execution limits and invokes the method

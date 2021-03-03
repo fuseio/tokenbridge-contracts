@@ -1,9 +1,9 @@
-const PrimaryHomeMultiAMBErc20ToErc677 = artifacts.require('PrimaryHomeMultiAMBErc20ToErc677.sol')
+const HomeMultiAMBErc20ToErc677 = artifacts.require('HomeMultiAMBErc20ToErc677.sol')
 const ForeignMultiAMBErc20ToErc677 = artifacts.require('ForeignMultiAMBErc20ToErc677.sol')
 const EternalStorageProxy = artifacts.require('EternalStorageProxy.sol')
 const AMBMock = artifacts.require('AMBMock.sol')
 const ERC677BridgeToken = artifacts.require('ERC677BridgeToken.sol')
-const PermittableToken = artifacts.require('ERC677MultiBridgeMintableToken.sol')
+const PermittableToken = artifacts.require('PermittableToken.sol')
 const Sacrifice = artifacts.require('Sacrifice.sol')
 
 const { expect } = require('chai')
@@ -25,7 +25,7 @@ const otherMessageId = '0x35d3818e50234655f6aebb2a1cfbf30f59568d8a4ec72066fac5a2
 const deployMessageId = '0x87b0c56ed7052872cd6ac5ad2e4d23b3e9bc7637837d099f083dae24aae5b2f2'
 const failedMessageId = '0x2ebc2ccc755acc8eaf9252e19573af708d644ab63a39619adb080a3500a4ff2e'
 
-contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
+contract('HomeMultiAMBErc20ToErc677', async accounts => {
   let contract
   let token
   let ambBridgeContract
@@ -39,7 +39,7 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
   const user2 = accounts[2]
   const value = oneEther
   beforeEach(async () => {
-    contract = await PrimaryHomeMultiAMBErc20ToErc677.new()
+    contract = await HomeMultiAMBErc20ToErc677.new()
     ambBridgeContract = await AMBMock.new()
     otherSideAMBBridgeContract = await AMBMock.new()
     await ambBridgeContract.setMaxGasPerTx(maxGasPerTx)
@@ -299,7 +299,7 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
     beforeEach(async () => {
       const storageProxy = await EternalStorageProxy.new()
       await storageProxy.upgradeTo('1', contract.address).should.be.fulfilled
-      contract = await PrimaryHomeMultiAMBErc20ToErc677.at(storageProxy.address)
+      contract = await HomeMultiAMBErc20ToErc677.at(storageProxy.address)
       await contract.initialize(
         ambBridgeContract.address,
         otherSideMediator.address,

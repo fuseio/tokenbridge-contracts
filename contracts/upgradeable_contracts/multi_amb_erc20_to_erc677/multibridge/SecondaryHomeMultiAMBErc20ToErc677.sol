@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "../HomeMultiAMBErc20ToErc677.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 
 /**
 * @title SecondaryHomeMultiAMBErc20ToErc677
@@ -17,17 +18,15 @@ contract SecondaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
     * to execute the Mint or Unlock accordingly.
     * @param _token address of the bridged ERC20/ERC677 token on the foreign side.
     * @param _homeToken address of the existing ERC677 MultiBridgeToken
-    * @param _decimals decimals of the bridge foreign token.
-    * @param _value amount of tokens to be received.
     */
     function registerBridgedTokens(
         address _token,
-        address _homeToken,
-        uint8 _decimals,
-        uint256 _value
-    ) external onlyOwner {   
+        address _homeToken
+    ) external onlyOwner {  
+        require(homeTokenAddress(_token) == address(0));
+        require(foreignTokenAddress(_homeToken) == address(0));
         _setTokenAddressPair(_token, _homeToken);
-        _initializeTokenBridgeLimits(_homeToken, _decimals);
+        _initializeTokenBridgeLimits(_homeToken, DetailedERC20(_homeToken).decimals());
         _setFee(HOME_TO_FOREIGN_FEE, _homeToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
         _setFee(FOREIGN_TO_HOME_FEE, _homeToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
     }
