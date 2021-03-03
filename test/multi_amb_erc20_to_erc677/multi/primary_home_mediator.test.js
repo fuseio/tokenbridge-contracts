@@ -5,10 +5,11 @@ const AMBMock = artifacts.require('AMBMock.sol')
 const ERC677BridgeToken = artifacts.require('ERC677BridgeToken.sol')
 const PermittableToken = artifacts.require('ERC677MultiBridgeMintableToken.sol')
 const Sacrifice = artifacts.require('Sacrifice.sol')
+const BridgeMock = artifacts.require('BridgeMock.sol')
 
 const { expect } = require('chai')
-const { getEvents, expectEventInLogs, ether, strip0x } = require('../helpers/helpers')
-const { ZERO_ADDRESS, toBN } = require('../setup')
+const { getEvents, expectEventInLogs, ether, strip0x } = require('../../helpers/helpers')
+const { ZERO_ADDRESS, toBN } = require('../../setup')
 
 const ZERO = toBN(0)
 const halfEther = ether('0.5')
@@ -95,9 +96,13 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
     }
   ]
 
-  async function bridgeToken(token, value = oneEther, forceFail = false) {
+  async function bridgeToken(token, value = oneEther, forceFail = false, options = {}) {
+    debugger
+    const bridgeContract = options.bridgeContract || contract
+    const otherSideMediatorContract = options.otherSideMediator || otherSideMediator
+
     await token.mint(user, value).should.be.fulfilled
-    const { receipt } = await token.transfer(otherSideMediator.address, value, { from: user }).should.be.fulfilled
+    const { receipt } = await token.transfer(otherSideMediatorContract.address, value, { from: user }).should.be.fulfilled
     const encodedData = strip0x(
       web3.eth.abi.decodeParameters(
         ['bytes'],
@@ -106,8 +111,8 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
     )
     const data = `0x${encodedData.slice(2 * (4 + 20 + 8 + 20 + 20 + 4 + 1 + 1 + 1 + 2 + 2))}` // remove AMB header
     await ambBridgeContract.executeMessageCall(
-      contract.address,
-      otherSideMediator.address,
+      bridgeContract.address,
+      otherSideMediatorContract.address,
       data,
       deployMessageId,
       forceFail ? 100 : 2000000
@@ -117,12 +122,12 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
 
     if (forceFail) return null
 
-    const events = await getEvents(contract, { event: 'NewTokenRegistered' })
+    const events = await getEvents(bridgeContract, { event: 'NewTokenRegistered' })
     expect(events.length).to.be.equal(1)
     expect(events[0].returnValues.foreignToken).to.be.equal(token.address)
     const homeToken = await PermittableToken.at(events[0].returnValues.homeToken)
-    const fee = await contract.getFee(await contract.FOREIGN_TO_HOME_FEE(), ZERO_ADDRESS)
-    const rewardAccounts = (await contract.rewardAddressCount()).toNumber()
+    const fee = await bridgeContract.getFee(await bridgeContract.FOREIGN_TO_HOME_FEE(), ZERO_ADDRESS)
+    const rewardAccounts = (await bridgeContract.rewardAddressCount()).toNumber()
     const bridgedValue =
       rewardAccounts > 0
         ? toBN(value)
@@ -393,8 +398,8 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
         expect(await homeToken.decimals()).to.be.bignumber.equal('18')
         expect(await homeToken.version()).to.be.equal('1')
         expect(await homeToken.owner()).to.be.equal(contract.address)
-        // expect(await homeToken.bridgeContract()).to.be.equal(contract.address)
         expect(await homeToken.isBridge(contract.address)).to.be.equal(true)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('1')
         expect(await homeToken.totalSupply()).to.be.bignumber.equal(value)
         expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(value)
         expect(await contract.homeTokenAddress(token.address)).to.be.equal(homeToken.address)
@@ -967,6 +972,102 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
         })
       }
     })
+
+    describe('addBridgePerToken', () => {
+      let secondaryBridge
+      const notOwner = accounts[5]
+      beforeEach(async () => {
+        homeToken = await bridgeToken(token)
+        secondaryBridge = await BridgeMock.new(homeToken.address)
+      })
+
+      it('adding bridge per token from not an owner should be rejected', async () => {
+        await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: notOwner }).should.be.rejected
+        expect(await homeToken.isBridge(secondaryBridge.address)).to.be.equal(false)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('1')
+        await secondaryBridge.mint(user, oneEther).should.be.rejected
+      })
+
+      it('adding bridge per token from an owner should fulfilled', async () => {
+        await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: owner }).should.be.fulfilled
+        expect(await homeToken.isBridge(secondaryBridge.address)).to.be.equal(true)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('2')
+        await secondaryBridge.mint(user, oneEther).should.be.fulfilled
+      })
+
+      it('adding multiple bridges per token from an owner should fulfilled', async () => {
+        const thirdBridge = await BridgeMock.new(homeToken.address)
+        await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: owner }).should.be.fulfilled
+        await contract.addBridgePerToken(thirdBridge.address, homeToken.address, { from: owner }).should.be.fulfilled
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('3')
+        await secondaryBridge.mint(user, oneEther).should.be.fulfilled
+        await thirdBridge.mint(user, oneEther).should.be.fulfilled
+      })
+
+      it('adding same bridge per token multiple times should be rejected', async () => {
+        await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: owner }).should.be.fulfilled
+        await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: owner }).should.be.rejected
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('2')
+      })
+    })
+
+    // describe('bridge multiple tokens', () => {
+    //   const notOwner = accounts[1]
+    //   let secondaryBridge, secondaryOtherSideMediator
+    //   beforeEach(async () => {
+    //     secondaryBridge = await PrimaryHomeMultiAMBErc20ToErc677.new()
+    //     secondaryOtherSideMediator = await ForeignMultiAMBErc20ToErc677.new()
+    //     await secondaryOtherSideMediator.initialize(
+    //       otherSideAMBBridgeContract.address,
+    //       secondaryBridge.address,
+    //       [dailyLimit, maxPerTx, minPerTx],
+    //       [executionDailyLimit, executionMaxPerTx],
+    //       maxGasPerTx,
+    //       owner
+    //     )
+    //     debugger
+    //     homeToken = await bridgeToken(token)
+    //     debugger
+    //   })
+
+    //   it('second bridge can mint', async () => {
+    //     debugger
+    //     await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: notOwner }).should.be.rejected
+    //     debugger
+    //     await bridgeToken(token, oneEther, false, { bridgeContract: secondaryBridge, otherSideMediator  })
+
+    //     // OtherSideMediator
+    //   })
+    // })
+
+    describe('removeBridgePerToken', () => {
+      let secondaryBridge
+      const notOwner = accounts[1]
+      beforeEach(async () => {
+        secondaryBridge = await AMBMock.new()
+        homeToken = await bridgeToken(token)
+      })
+
+      it('removing bridge per token from not an owner should be rejected', async () => {
+        await contract.removeBridgePerToken(contract.address, homeToken.address, { from: notOwner }).should.be.rejected
+        expect(await homeToken.isBridge(contract.address)).to.be.equal(true)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('1')
+      })
+
+      it('removing bridge per token from an owner should be fulfilled', async () => {
+        await contract.removeBridgePerToken(contract.address, homeToken.address, { from: owner }).should.be.fulfilled
+        expect(await homeToken.isBridge(contract.address)).to.be.equal(false)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('0')
+      })
+
+      it('removing bridge twice per token from an owner should be rejected', async () => {
+        await contract.removeBridgePerToken(contract.address, homeToken.address, { from: owner }).should.be.fulfilled
+        expect(await homeToken.isBridge(contract.address)).to.be.equal(false)
+        expect(await homeToken.bridgeCount()).to.be.bignumber.equal('0')
+        await contract.removeBridgePerToken(contract.address, homeToken.address, { from: owner }).should.be.rejected
+      })
+    })
+
   })
 
   describe('fees management', () => {

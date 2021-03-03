@@ -2,7 +2,8 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "./BasicMultiAMBErc20ToErc677.sol";
-import "./HomeMultiAMBErc20ToErc677.sol";
+// import "./HomeMultiAMBErc20ToErc677.sol";
+import "./multibridge/PrimaryHomeMultiAMBErc20ToErc677.sol";
 import "../../libraries/TokenReader.sol";
 import "../../libraries/SafeERC20.sol";
 
@@ -139,7 +140,7 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
             data = abi.encodeWithSelector(this.handleBridgedTokens.selector, _token, receiver, _value);
         } else {
             data = abi.encodeWithSelector(
-                HomeMultiAMBErc20ToErc677(this).deployAndHandleBridgedTokens.selector,
+                PrimaryHomeMultiAMBErc20ToErc677(this).deployAndHandleBridgedTokens.selector,
                 _token,
                 name,
                 symbol,

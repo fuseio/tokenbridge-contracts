@@ -27,6 +27,11 @@ contract TokenProxy is Proxy {
     mapping(address => uint256) internal nonces;
     mapping(address => mapping(address => uint256)) internal expirations;
 
+    // address public constant F_ADDR = 0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
+    // uint256 internal constant MAX_BRIDGES = 50;
+    mapping(address => address) public bridgePointers;
+    uint256 public bridgeCount;
+
     /**
     * @dev Creates a non-upgradeable token proxy for PermitableToken.sol, initializes its eternalStorage.
     * @param _tokenImage address of the token image used for mirroring all functions.
@@ -59,6 +64,7 @@ contract TokenProxy is Proxy {
                 address(this)
             )
         );
+        bridgePointers[0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF] = 0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
     }
 
     /**

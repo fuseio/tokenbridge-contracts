@@ -12,6 +12,7 @@ contract ERC677MultiBridgeMintableToken is ERC677MultiBridgeToken {
         public
         ERC677MultiBridgeToken(_name, _symbol, _decimals, _chainId)
     {
+        // solhint-disable-previous-line no-empty-blocks
     }
     modifier hasMintPermission() {
         require(isBridge(msg.sender));
