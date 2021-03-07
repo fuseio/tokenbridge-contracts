@@ -27,7 +27,7 @@ const otherMessageId = '0x35d3818e50234655f6aebb2a1cfbf30f59568d8a4ec72066fac5a2
 const deployMessageId = '0x87b0c56ed7052872cd6ac5ad2e4d23b3e9bc7637837d099f083dae24aae5b2f2'
 const failedMessageId = '0x2ebc2ccc755acc8eaf9252e19573af708d644ab63a39619adb080a3500a4ff2e'
 
-contract('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
+contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
   let contract
   let token
   let ambBridgeContract
@@ -1013,16 +1013,16 @@ contract('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
       let transferMessageId
 
       beforeEach(async () => {
-        homeToken = await bridgeToken(token)
+        homeToken = await bridgeSecondaryToken(token)
       })
 
       for (const send of sendFunctions) {
         it(`should fix tokens burnt via ${send.name}`, async () => {
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(value)
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
           // User transfer tokens
           await send()
 
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
 
           const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
           expect(events.length).to.be.equal(1)
@@ -1057,7 +1057,7 @@ contract('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
 
           // Then
           expect(await ambBridgeContract.messageCallStatus(exampleMessageId)).to.be.equal(true)
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(value)
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
           expect(await contract.messageFixed(transferMessageId)).to.be.equal(true)
 
           const event = await getEvents(contract, { event: 'FailedMessageFixed' })
@@ -1077,13 +1077,13 @@ contract('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
           ).should.be.fulfilled
 
           expect(await ambBridgeContract.messageCallStatus(otherMessageId)).to.be.equal(false)
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(value)
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
         })
       }
     })
   })
 
-  describe('fees management', () => {
+  describe.only('fees management', () => {
     beforeEach(async () => {
       await contract.initialize(
         ambBridgeContract.address,
