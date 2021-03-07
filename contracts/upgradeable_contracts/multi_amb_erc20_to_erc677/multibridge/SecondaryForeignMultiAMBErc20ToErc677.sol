@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "../ForeignMultiAMBErc20ToErc677.sol";
+import "./PrimaryHomeMultiAMBErc20ToErc677.sol";
 
 /**
  * @title SecondaryForeignMultiAMBErc20ToErc677
@@ -30,7 +31,7 @@ contract SecondaryForeignMultiAMBErc20ToErc677 is ForeignMultiAMBErc20ToErc677 {
 
         bool isKnownToken = isTokenRegistered(_token);
         if (!isKnownToken) {
-            require(msg.sender == owner());
+            require(_from == owner());
             string memory name = TokenReader.readName(_token);
             string memory symbol = TokenReader.readSymbol(_token);
             uint8 decimals = uint8(TokenReader.readDecimals(_token));

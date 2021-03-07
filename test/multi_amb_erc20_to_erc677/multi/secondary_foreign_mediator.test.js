@@ -1,4 +1,4 @@
-const HomeMultiAMBErc20ToErc677 = artifacts.require('SecondaryHomeMultiAMBErc20ToErc677.sol')
+const HomeMultiAMBErc20ToErc677 = artifacts.require('HomeMultiAMBErc20ToErc677.sol')
 const ForeignMultiAMBErc20ToErc677 = artifacts.require('SecondaryForeignMultiAMBErc20ToErc677.sol')
 const EternalStorageProxy = artifacts.require('EternalStorageProxy.sol')
 const AMBMock = artifacts.require('AMBMock.sol')
@@ -7,8 +7,8 @@ const ERC677BridgeToken = artifacts.require('ERC677BridgeToken.sol')
 const Sacrifice = artifacts.require('Sacrifice.sol')
 
 const { expect } = require('chai')
-const { getEvents, expectEventInLogs, ether, strip0x } = require('../helpers/helpers')
-const { ZERO_ADDRESS, toBN } = require('../setup')
+const { getEvents, expectEventInLogs, ether, strip0x } = require('../../helpers/helpers')
+const { ZERO_ADDRESS, toBN } = require('../../setup')
 
 const ZERO = toBN(0)
 const halfEther = ether('0.5')
@@ -24,7 +24,7 @@ const exampleMessageId = '0xf308b922ab9f8a7128d9d7bc9bce22cd88b2c05c8213f0e2d810
 const otherMessageId = '0x35d3818e50234655f6aebb2a1cfbf30f59568d8a4ec72066fac5a25dbe7b8121'
 const failedMessageId = '0x2ebc2ccc755acc8eaf9252e19573af708d644ab63a39619adb080a3500a4ff2e'
 
-contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
+contract('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
   let contract
   let token
   let ambBridgeContract
@@ -45,35 +45,35 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
 
   const sendFunctions = [
     async function simpleTransfer() {
-      await token.transfer(contract.address, value, { from: owner }).should.be.fulfilled
-      return owner
+      await token.transfer(contract.address, value, { from: user }).should.be.fulfilled
+      return user
     },
     async function emptyAlternativeReceiver() {
-      await token.transferAndCall(contract.address, value, '0x', { from: owner }).should.be.fulfilled
-      return owner
+      await token.transferAndCall(contract.address, value, '0x', { from: user }).should.be.fulfilled
+      return user
     },
     async function sameAlternativeReceiver() {
-      await token.transferAndCall(contract.address, value, owner, { from: owner }).should.be.fulfilled
-      return owner
+      await token.transferAndCall(contract.address, value, user, { from: user }).should.be.fulfilled
+      return user
     },
     async function differentAlternativeReceiver() {
-      await token.transferAndCall(contract.address, value, user2, { from: owner }).should.be.fulfilled
+      await token.transferAndCall(contract.address, value, user2, { from: user }).should.be.fulfilled
       return user2
     },
     async function simpleRelayTokens1() {
-      await token.approve(contract.address, value, { from: owner }).should.be.fulfilled
-      await contract.methods['relayTokens(address,uint256)'](token.address, value, { from: owner }).should.be.fulfilled
-      return owner
+      await token.approve(contract.address, value, { from: user }).should.be.fulfilled
+      await contract.methods['relayTokens(address,uint256)'](token.address, value, { from: user }).should.be.fulfilled
+      return user
     },
     async function simpleRelayTokens2() {
-      await token.approve(contract.address, value, { from: owner }).should.be.fulfilled
-      await contract.methods['relayTokens(address,address,uint256)'](token.address, owner, value, { from: owner }).should
+      await token.approve(contract.address, value, { from: user }).should.be.fulfilled
+      await contract.methods['relayTokens(address,address,uint256)'](token.address, user, value, { from: user }).should
         .be.fulfilled
-      return owner
+      return user
     },
     async function relayTokensWithAlternativeReceiver1() {
-      await token.approve(contract.address, value, { from: owner }).should.be.fulfilled
-      await contract.methods['relayTokens(address,address,uint256)'](token.address, user2, value, { from: owner }).should
+      await token.approve(contract.address, value, { from: user }).should.be.fulfilled
+      await contract.methods['relayTokens(address,address,uint256)'](token.address, user2, value, { from: user }).should
         .be.fulfilled
       return user2
     }
@@ -218,6 +218,7 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
     })
 
     it('should only work with unknown token', async () => {
+      debugger
       await token.mint(user, oneEther).should.be.fulfilled
       expect(await token.balanceOf(user)).to.be.bignumber.equal(oneEther)
 
@@ -329,7 +330,7 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
           await contract.setExecutionDailyLimit(token.address, ether('5'), { from: owner }).should.be.rejected
           await contract.setExecutionMaxPerTx(token.address, ether('1.5'), { from: owner }).should.be.rejected
 
-          await token.transfer(contract.address, value, { from: owner })
+          await token.transfer(contract.address, value, { from: user })
 
           await contract.setDailyLimit(token.address, ether('5'), { from: owner }).should.be.fulfilled
           await contract.setMaxPerTx(token.address, ether('1.5'), { from: owner }).should.be.fulfilled
@@ -347,83 +348,30 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
     })
 
     describe('onTokenTransfer', () => {
-      beforeEach(async () => {
-        await token.mint(owner, twoEthers, { from: owner }).should.be.fulfilled
-      })
-
       afterEach(async () => {
         // Total supply remains the same
-        expect(await token.totalSupply()).to.be.bignumber.equal(ether('4'))
+        expect(await token.totalSupply()).to.be.bignumber.equal(twoEthers)
       })
-
-      describe('Unregistered token', () => {
-        it('user cannot register new tokens', async () => {
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)  
-          // When
-          await token.transferAndCall(contract.address, halfEther, '0x', { from: user }).should.be.rejected
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
-
-        })
-
-        it('owner can register new tokens', async () => {
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
-          // only token address can call it
-          await contract.onTokenTransfer(owner, halfEther, '0x', { from: owner }).should.be.rejected
-  
-          // must be within limits
-          await token.transferAndCall(contract.address, twoEthers, '0x', { from: owner }).should.be.rejected
-  
-          // When
-          await token.transferAndCall(contract.address, halfEther, '0x', { from: owner }).should.be.fulfilled
-  
-          // Then
-          const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
-          expect(events.length).to.be.equal(1)
-          expect(events[0].returnValues.encodedData.includes(strip0x(owner).toLowerCase())).to.be.equal(true)
-          expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(halfEther)
-          expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(halfEther)
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-          expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(halfEther)
-        })
-      })
-
-      describe('Registered tokens', () => {
-
-        afterEach(async () => {
-          // Total supply remains the same
-          expect(await token.totalSupply()).to.be.bignumber.equal(ether('4'))
-        })
-
-        beforeEach(async () => {
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
-          await token.transferAndCall(contract.address, halfEther, '0x', { from: owner }).should.be.fulfilled
-          expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-        })
-
 
       it('should call AMB bridge and lock tokens', async () => {
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(halfEther)
-        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(halfEther)
-        expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(halfEther)
+        expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
         // only token address can call it
         await contract.onTokenTransfer(user, halfEther, '0x', { from: owner }).should.be.rejected
 
         // must be within limits
         await token.transferAndCall(contract.address, twoEthers, '0x', { from: user }).should.be.rejected
 
-        const fromBlock = (await web3.eth.getBlock("latest")).number
         // When
         await token.transferAndCall(contract.address, halfEther, '0x', { from: user }).should.be.fulfilled
 
         // Then
-        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' }, fromBlock)
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
         expect(events.length).to.be.equal(1)
         expect(events[0].returnValues.encodedData.includes(strip0x(user).toLowerCase())).to.be.equal(true)
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(oneEther)
-        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(oneEther)
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(halfEther)
+        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(halfEther)
         expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(oneEther)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(halfEther)
       })
 
       it('should respect global shutdown', async () => {
@@ -434,41 +382,28 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
       })
 
       it('should be able to specify a different receiver', async () => {
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(halfEther)
-        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(halfEther)
-        expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(halfEther)
+        expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
         // must be a valid address param
         await token.transferAndCall(contract.address, halfEther, '0x00', { from: user }).should.be.rejected
 
-        const fromBlock = (await web3.eth.getBlock("latest")).number
         // When
         await token.transferAndCall(contract.address, halfEther, user2, { from: user }).should.be.fulfilled
 
         // Then
-        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' }, fromBlock)
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
         expect(events.length).to.be.equal(1)
         expect(events[0].returnValues.encodedData.includes(strip0x(user2).toLowerCase())).to.be.equal(true)
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(oneEther)
-        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(oneEther)
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(halfEther)
+        expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(halfEther)
         expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(oneEther)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(halfEther)
       })
-      })
-
     })
 
     describe('relayTokens', () => {
-      beforeEach(async () => {
-        await token.mint(owner, twoEthers, { from: owner }).should.be.fulfilled
-        expect(await contract.isTokenRegistered(token.address)).to.be.equal(false)
-        await token.transferAndCall(contract.address, halfEther, '0x', { from: owner }).should.be.fulfilled
-        expect(await contract.isTokenRegistered(token.address)).to.be.equal(true)
-      })
-
       afterEach(async () => {
         // Total supply remains the same
-        expect(await token.totalSupply()).to.be.bignumber.equal(ether('4'))
+        expect(await token.totalSupply()).to.be.bignumber.equal(twoEthers)
       })
 
       it('should allow to bridge tokens using approve and relayTokens', async () => {
@@ -477,16 +412,15 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
         expect(await token.allowance(user, contract.address)).to.be.bignumber.equal(value)
 
         // When
-        const fromBlock = (await web3.eth.getBlock("latest")).number
         await contract.methods['relayTokens(address,address,uint256)'](token.address, user, value, { from: user })
           .should.be.fulfilled
 
         // Then
-        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' }, fromBlock)
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
         expect(events.length).to.be.equal(1)
         expect(events[0].returnValues.encodedData.includes(strip0x(user).toLowerCase())).to.be.equal(true)
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value.add(halfEther))
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value.add(halfEther))
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value)
       })
 
       it('should allow to specify a different receiver without specifying sender', async () => {
@@ -495,16 +429,15 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
         expect(await token.allowance(user, contract.address)).to.be.bignumber.equal(value)
 
         // When
-        const fromBlock = (await web3.eth.getBlock("latest")).number
         await contract.methods['relayTokens(address,address,uint256)'](token.address, user2, value, { from: user })
           .should.be.fulfilled
 
         // Then
-        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' }, fromBlock)
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
         expect(events.length).to.be.equal(1)
         expect(events[0].returnValues.encodedData.includes(strip0x(user2).toLowerCase())).to.be.equal(true)
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value.add(halfEther))
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value.add(halfEther))
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value)
       })
 
       it('should allow to specify no receiver and no sender', async () => {
@@ -513,15 +446,14 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
         expect(await token.allowance(user, contract.address)).to.be.bignumber.equal(value)
 
         // When
-        const fromBlock = (await web3.eth.getBlock("latest")).number
         await contract.methods['relayTokens(address,uint256)'](token.address, value, { from: user }).should.be.fulfilled
 
         // Then
-        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' }, fromBlock)
+        const events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
         expect(events.length).to.be.equal(1)
         expect(events[0].returnValues.encodedData.includes(strip0x(user).toLowerCase())).to.be.equal(true)
-        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value.add(halfEther))
-        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value.add(halfEther))
+        expect(await contract.totalSpentPerDay(token.address, currentDay)).to.be.bignumber.equal(value)
+        expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(value)
       })
 
       it('should fail if user did not approve the transfer', async () => {
@@ -541,8 +473,6 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
     describe('token registration', () => {
       for (const send of sendFunctions) {
         it(`should make subsequent calls deployAndHandleBridgedTokens handleBridgedTokens to when using ${send.name}`, async () => {
-          await token.mint(owner, twoEthers, { from: owner }).should.be.fulfilled
-
           const receiver = await send()
 
           let events = await getEvents(ambBridgeContract, { event: 'MockedEvent' })
@@ -583,8 +513,8 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
           const f2 = toBN('1000000000000000000')
 
           token = await ERC677BridgeToken.new('TEST', 'TST', decimals)
-          await token.mint(owner, value.mul(f1).div(f2)).should.be.fulfilled
-          await token.transfer(contract.address, value.mul(f1).div(f2), { from: owner }).should.be.fulfilled
+          await token.mint(user, value.mul(f1).div(f2)).should.be.fulfilled
+          await token.transfer(contract.address, value.mul(f1).div(f2), { from: user }).should.be.fulfilled
 
           expect(await contract.dailyLimit(token.address)).to.be.bignumber.equal(dailyLimit.mul(f1).div(f2))
           expect(await contract.maxPerTx(token.address)).to.be.bignumber.equal(maxPerTx.mul(f1).div(f2))
@@ -600,8 +530,8 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
 
       it(`should initialize limits according to decimals = 0`, async () => {
         token = await ERC677BridgeToken.new('TEST', 'TST', 0)
-        await token.mint(owner, '1').should.be.fulfilled
-        await token.transfer(contract.address, '1', { from: owner }).should.be.fulfilled
+        await token.mint(user, '1').should.be.fulfilled
+        await token.transfer(contract.address, '1', { from: user }).should.be.fulfilled
 
         expect(await contract.dailyLimit(token.address)).to.be.bignumber.equal('10000')
         expect(await contract.maxPerTx(token.address)).to.be.bignumber.equal('100')
@@ -611,10 +541,10 @@ contract.only('SecondaryForeignMultiAMBErc20ToErc677', async accounts => {
       })
     })
 
-    describe.only('handleBridgedTokens', () => {
+    describe('handleBridgedTokens', () => {
       it('should unlock tokens on message from amb', async () => {
-        await token.transfer(contract.address, value, { from: owner }).should.be.fulfilled
-        await token.transfer(contract.address, value, { from: owner }).should.be.fulfilled
+        await token.transfer(contract.address, value, { from: user }).should.be.fulfilled
+        await token.transfer(contract.address, value, { from: user }).should.be.fulfilled
         expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(twoEthers)
         expect(await contract.mediatorBalance(token.address)).to.be.bignumber.equal(twoEthers)
 
