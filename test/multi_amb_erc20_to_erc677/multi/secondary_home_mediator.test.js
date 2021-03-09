@@ -27,7 +27,7 @@ const otherMessageId = '0x35d3818e50234655f6aebb2a1cfbf30f59568d8a4ec72066fac5a2
 const deployMessageId = '0x87b0c56ed7052872cd6ac5ad2e4d23b3e9bc7637837d099f083dae24aae5b2f2'
 const failedMessageId = '0x2ebc2ccc755acc8eaf9252e19573af708d644ab63a39619adb080a3500a4ff2e'
 
-contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
+contract('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
   let contract
   let token
   let ambBridgeContract
@@ -74,8 +74,6 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
       [ether('0.1'), ZERO]
     ).should.be.fulfilled
 
-    homeToken = await  (primaryToken, oneEther, false)
-    
     contract = await SecondaryHomeMultiAMBErc20ToErc677.new()
     otherSideMediator = await ForeignMultiAMBErc20ToErc677.new()
 
@@ -87,9 +85,6 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
       maxGasPerTx,
       owner
     )
-
-
-    debugger
   })
 
   const sendFunctions = [
@@ -171,6 +166,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
 
   async function bridgeSecondaryToken(token, value = oneEther, forceFail = false) {
     const homeToken = await bridgeToken(token, value, forceFail)
+
     if (forceFail && !homeToken) {
       return
     }
@@ -178,6 +174,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
     await primaryBridgeContract.addBridgePerToken(contract.address, homeToken.address)
 
     await token.mint(user, value).should.be.fulfilled
+    const balanceBefore = await homeToken.balanceOf(user)
     const { receipt } = await token.transfer(otherSideMediator.address, value, { from: user }).should.be.fulfilled
     const encodedData = strip0x(
       web3.eth.abi.decodeParameters(
@@ -211,7 +208,10 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
             .mul(oneEther.sub(fee))
             .div(oneEther)
         : toBN(value)
-    expect(await homeTokenReturned.balanceOf(user)).to.be.bignumber.equal(bridgedValue.mul(toBN(2)))
+    const balanceAfter = await homeTokenReturned.balanceOf(user)
+    const diff = balanceAfter.sub(balanceBefore)
+    expect(diff).to.be.bignumber.equal(bridgedValue)
+
     return homeTokenReturned
   }
 
@@ -396,7 +396,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
     })
 
     it('should only work with unknown token', async () => {
-      await contract.registerBridgedTokens(token.address, homeToken.address, { from: owner }).should.be.fulfilled
+      homeToken = await bridgeSecondaryToken(token)
 
       await contract.claimTokens(homeToken.address, accounts[3], { from: user }).should.be.rejected
       await contract.claimTokens(homeToken.address, accounts[3], { from: owner }).should.be.rejected
@@ -1083,7 +1083,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
     })
   })
 
-  describe.only('fees management', () => {
+  describe('fees management', () => {
     beforeEach(async () => {
       await contract.initialize(
         ambBridgeContract.address,
@@ -1250,7 +1250,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
         feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
         expect(feeEvents.length).to.be.equal(0)
 
-        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
+        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(twoEthers.add(oneEther))
         expect(await homeToken.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
         expect(await homeToken.balanceOf(owner)).to.be.bignumber.equal(ZERO)
       })
@@ -1268,7 +1268,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
         let feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
         expect(feeEvents.length).to.be.equal(1)
 
-        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ether('0.99'))
+        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther.add(ether('0.99')))
         expect(await homeToken.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
         expect(await homeToken.balanceOf(owner)).to.be.bignumber.equal(ether('0.01'))
 
@@ -1297,7 +1297,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
         feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
         expect(feeEvents.length).to.be.equal(2)
 
-        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ether('1.98'))
+        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ether('1.98').add(oneEther))
         expect(await homeToken.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
         expect(await homeToken.balanceOf(owner)).to.be.bignumber.equal(ether('0.02'))
       })
@@ -1313,7 +1313,7 @@ contract.only('SecondaryHomeMultiAMBErc20ToErc677', async accounts => {
         let feeEvents = await getEvents(contract, { event: 'FeeDistributed' })
         expect(feeEvents.length).to.be.equal(1)
 
-        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ether('0.198000000000000099'))
+        expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ether('0.398000000000000199'))
         expect(await homeToken.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
         const balance1 = (await homeToken.balanceOf(owner)).toString()
         const balance2 = (await homeToken.balanceOf(accounts[9])).toString()
