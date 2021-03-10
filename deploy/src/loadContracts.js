@@ -16,6 +16,7 @@ function getContracts() {
     ERC677BridgeToken: require(`../../build/${buildPath}/ERC677BridgeToken.json`),
     ERC677BridgeTokenRewardable: require(`../../build/${buildPath}/ERC677BridgeTokenRewardable.json`),
     ERC677BridgeTokenPermittable: require(`../../build/${buildPath}/PermittableToken.json`),
+    ERC677MultiBridgeMintableToken: require(`../../build/${buildPath}/ERC677MultiBridgeMintableToken.json`),
     ForeignBridgeErcToNative: require(`../../build/${buildPath}/ForeignBridgeErcToNative.json`),
     FeeManagerErcToNative: require(`../../build/${buildPath}/FeeManagerErcToNative.json`),
     FeeManagerErcToNativePOSDAO: require(`../../build/${buildPath}/FeeManagerErcToNativePOSDAO.json`),
@@ -41,6 +42,9 @@ function getContracts() {
     HomeAMBErc20ToNative: require(`../../build/${buildPath}/HomeAMBErc20ToNative.json`),
     ForeignMultiAMBErc20ToErc677: require(`../../build/${buildPath}/ForeignMultiAMBErc20ToErc677.json`),
     HomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/HomeMultiAMBErc20ToErc677.json`),
+    SecondaryHomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/SecondaryHomeMultiAMBErc20ToErc677.json`),
+    PrimaryHomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/PrimaryHomeMultiAMBErc20ToErc677.json`),
+    SecondaryForeignMultiAMBErc20ToErc677: require(`../../build/${buildPath}/SecondaryForeignMultiAMBErc20ToErc677.json`)
   }
 }
 

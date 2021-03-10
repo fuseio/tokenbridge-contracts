@@ -125,6 +125,8 @@ if (BRIDGE_MODE.includes('AMB_')) {
     FOREIGN_MEDIATOR_REQUEST_GAS_LIMIT: bigNumValidator(),
     FOREIGN_MIN_AMOUNT_PER_TX: bigNumValidator(),
     FOREIGN_DAILY_LIMIT: bigNumValidator(),
+    MULTI_AMB_BRIDGE: envalid.bool({ default: false }),
+    SECONDARY_MULTI_AMB_BRIDGE: envalid.bool({ default: false })
   }
 
   if (BRIDGE_MODE !== 'AMB_ERC_TO_NATIVE' && BRIDGE_MODE !== 'MULTI_AMB_ERC_TO_ERC') {

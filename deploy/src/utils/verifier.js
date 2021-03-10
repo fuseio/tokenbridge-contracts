@@ -7,7 +7,7 @@ const { EXPLORER_TYPES, REQUEST_STATUS } = require('../constants')
 
 const basePath = path.join(__dirname, '..', '..', '..', 'flats')
 
-const isBridgeToken = name => name === 'ERC677BridgeToken.sol' || name === 'ERC677BridgeTokenRewardable.sol' || name === 'PermittableToken.sol'
+const isBridgeToken = name => name === 'ERC677BridgeToken.sol' || name === 'ERC677BridgeTokenRewardable.sol' || name === 'PermittableToken.sol' || name === 'ERC677MultiBridgeMintableToken.sol'
 const isValidators = name => name === 'BridgeValidators.sol' || name === 'RewardableValidators.sol'
 const isInterestReceiver = name => name === 'InterestReceiver.sol'
 
@@ -16,6 +16,9 @@ const flat = async contractPath => {
   const name = pathArray[pathArray.length - 1]
   let module = pathArray[pathArray.length - 2]
 
+  if (module === 'multibridge') {
+    module = path.join(pathArray[pathArray.length - 3], module)
+  }
   if (isBridgeToken(name)) {
     module = ''
   } else if (isValidators(name)) {
@@ -72,11 +75,12 @@ const sendVerifyRequestBlockscout = async (contractPath, options) => {
 }
 
 const getExplorerType = apiUrl =>
-  apiUrl && apiUrl.includes('etherscan') ? EXPLORER_TYPES.ETHERSCAN : EXPLORER_TYPES.BLOCKSCOUT
+  apiUrl && (apiUrl.includes('etherscan') || apiUrl.includes('bscscan')) ? EXPLORER_TYPES.ETHERSCAN : EXPLORER_TYPES.BLOCKSCOUT
 
 const verifyContract = async (contract, params, type) => {
   try {
     let result
+    console.log(`Verifying contract ${contract}`)
     if (type === EXPLORER_TYPES.ETHERSCAN) {
       result = await sendVerifyRequestEtherscan(contract, params)
     } else {
@@ -87,6 +91,7 @@ const verifyContract = async (contract, params, type) => {
       return true
     }
   } catch (e) {
+    console.error(e)
     return false
   }
   return false
