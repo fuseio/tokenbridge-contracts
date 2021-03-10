@@ -4,26 +4,25 @@ import "../HomeMultiAMBErc20ToErc677.sol";
 import "../../../interfaces/IBridgeRegistry.sol";
 
 /**
-* @title PrimaryHomeMultiAMBErc20ToErc677
-* @dev Primary home side bridge implementation for multi-erc20-to-erc677 mediator intended to work on top of AMB bridge.
-* Primary bridge is the master of the various multi-erc20-to-erc677 bridges connected to different blockchains.
-* He is reponsible for registration of secondary bridges, and the registration on the tokens by the bridges.
-* 
-* It is designed to be used as an implementation contract of EternalStorageProxy contract.
-*/
+ * @title PrimaryHomeMultiAMBErc20ToErc677
+ * @dev Primary home side bridge implementation for multi-erc20-to-erc677 mediator intended to work on top of AMB bridge.
+ * Primary bridge is the master of the various multi-erc20-to-erc677 bridges connected to different blockchains.
+ * He is reponsible for registration of secondary bridges, and the registration on the tokens by the bridges.
+ *
+ * It is designed to be used as an implementation contract of EternalStorageProxy contract.
+ */
 contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
-
-      /**
-    * @dev Handles the bridged tokens for the first time, includes deployment of new TokenProxy contract.
-    * Checks that the value is inside the execution limits and invokes the method
-    * to execute the Mint or Unlock accordingly.
-    * @param _token address of the bridged ERC20/ERC677 token on the foreign side.
-    * @param _name name of the bridged token, "x" will be appended, if empty, symbol will be used instead.
-    * @param _symbol symbol of the bridged token, "x" will be appended, if empty, name will be used instead.
-    * @param _decimals decimals of the bridge foreign token.
-    * @param _recipient address that will receive the tokens.
-    * @param _value amount of tokens to be received.
-    */
+    /**
+     * @dev Handles the bridged tokens for the first time, includes deployment of new TokenProxy contract.
+     * Checks that the value is inside the execution limits and invokes the method
+     * to execute the Mint or Unlock accordingly.
+     * @param _token address of the bridged ERC20/ERC677 token on the foreign side.
+     * @param _name name of the bridged token, "x" will be appended, if empty, symbol will be used instead.
+     * @param _symbol symbol of the bridged token, "x" will be appended, if empty, name will be used instead.
+     * @param _decimals decimals of the bridge foreign token.
+     * @param _recipient address that will receive the tokens.
+     * @param _value amount of tokens to be received.
+     */
     function deployAndHandleBridgedTokens(
         address _token,
         string _name,
@@ -32,7 +31,6 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         address _recipient,
         uint256 _value
     ) external onlyMediator {
-        
         string memory name = _name;
         string memory symbol = _symbol;
         if (bytes(name).length == 0) {
@@ -52,11 +50,11 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         emit NewTokenRegistered(_token, homeToken);
     }
 
-  function addBridgePerToken(address _bridge, address _token) external onlyOwner {
-    IBridgeRegistry(_token).addBridge(_bridge);
-  }
+    function addBridgePerToken(address _bridge, address _token) external onlyOwner {
+        IBridgeRegistry(_token).addBridge(_bridge);
+    }
 
-  function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
-    IBridgeRegistry(_token).removeBridge(_bridge);
-  }
+    function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
+        IBridgeRegistry(_token).removeBridge(_bridge);
+    }
 }

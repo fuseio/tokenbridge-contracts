@@ -19,14 +19,12 @@ contract SecondaryForeignMultiAMBErc20ToErc677 is ForeignMultiAMBErc20ToErc677 {
      * @param _value requsted amount of bridged tokens
      * @param _data alternative receiver, if specified
      */
-    /**
-     * @dev Executes action on deposit of bridged tokens
-     * @param _token address of the token contract
-     * @param _from address of tokens sender
-     * @param _value requsted amount of bridged tokens
-     * @param _data alternative receiver, if specified
-     */
-    function bridgeSpecificActionsOnTokenTransfer(ERC677 _token, address _from, uint256 _value, bytes _data) internal {
+    function bridgeSpecificActionsOnTokenTransfer(
+        ERC677 _token,
+        address _from,
+        uint256 _value,
+        bytes _data
+    ) internal {
         if (lock()) return;
 
         bool isKnownToken = isTokenRegistered(_token);
@@ -63,11 +61,8 @@ contract SecondaryForeignMultiAMBErc20ToErc677 is ForeignMultiAMBErc20ToErc677 {
 
         _setMediatorBalance(_token, mediatorBalance(_token).add(_value));
 
-        bytes32 _messageId = bridgeContract().requireToPassMessage(
-            mediatorContractOnOtherSide(),
-            data,
-            requestGasLimit()
-        );
+        bytes32 _messageId =
+            bridgeContract().requireToPassMessage(mediatorContractOnOtherSide(), data, requestGasLimit());
 
         setMessageToken(_messageId, _token);
         setMessageValue(_messageId, _value);
