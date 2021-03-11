@@ -1,5 +1,6 @@
 pragma solidity 0.4.24;
 
+import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "../HomeMultiAMBErc20ToErc677.sol";
 import "../../../interfaces/IBridgeRegistry.sol";
 
@@ -12,6 +13,8 @@ import "../../../interfaces/IBridgeRegistry.sol";
  * It is designed to be used as an implementation contract of EternalStorageProxy contract.
  */
 contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
+    event TokenDeprecated(address indexed token);
+
     /**
      * @dev Handles the bridged tokens for the first time, includes deployment of new TokenProxy contract.
      * Checks that the value is inside the execution limits and invokes the method
@@ -50,11 +53,39 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         emit NewTokenRegistered(_token, homeToken);
     }
 
+    /**
+     * @dev Adding new bridge to the provided multibridge token. The mew bridge contract will be allowed to mint
+     * @param _bridge address of a new token bridge to another network
+     * @param _token address of the bridged ERC20/ERC677 token on the home side.
+     */
     function addBridgePerToken(address _bridge, address _token) external onlyOwner {
         IBridgeRegistry(_token).addBridge(_bridge);
     }
 
+    /**
+     * @dev Removing the bridge from the provided multibridge token. The bridge contract will be restricted from minting
+     * @param _bridge address of a new token bridge to another network
+     * @param _token address of the bridged ERC677MultiBridgeMintableToken token on the home side.
+     */
     function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
         IBridgeRegistry(_token).removeBridge(_bridge);
+    }
+
+    function upgradeToken(address _token) external onlyOwner {
+        require(isTokenRegistered(_token));
+        DetailedERC20 token = DetailedERC20(_token);
+        string memory name = token.name();
+        string memory symbol = token.symbol();
+        uint8 decimals = token.decimals();
+        address upgradedToken = new TokenProxy(tokenImage(), name, symbol, decimals, bridgeContract().sourceChainId());
+        IBridgeRegistry(upgradedToken).addBridge(address(this));
+
+        _setTokenAddressPair(_token, upgradedToken);
+        _initializeTokenBridgeLimits(upgradedToken, decimals);
+        _setFee(HOME_TO_FOREIGN_FEE, upgradedToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
+        _setFee(FOREIGN_TO_HOME_FEE, upgradedToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
+
+        emit TokenDeprecated(_token);
+        emit NewTokenRegistered(_token, upgradedToken);
     }
 }
