@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-import "../HomeMultiAMBErc20ToErc677.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
+import "../HomeMultiAMBErc20ToErc677.sol";
 
 /**
  * @title SecondaryHomeMultiAMBErc20ToErc677

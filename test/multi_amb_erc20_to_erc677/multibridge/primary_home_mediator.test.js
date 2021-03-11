@@ -1011,35 +1011,6 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
       })
     })
 
-    // describe('bridge multiple tokens', () => {
-    //   const notOwner = accounts[1]
-    //   let secondaryBridge, secondaryOtherSideMediator
-    //   beforeEach(async () => {
-    //     secondaryBridge = await PrimaryHomeMultiAMBErc20ToErc677.new()
-    //     secondaryOtherSideMediator = await ForeignMultiAMBErc20ToErc677.new()
-    //     await secondaryOtherSideMediator.initialize(
-    //       otherSideAMBBridgeContract.address,
-    //       secondaryBridge.address,
-    //       [dailyLimit, maxPerTx, minPerTx],
-    //       [executionDailyLimit, executionMaxPerTx],
-    //       maxGasPerTx,
-    //       owner
-    //     )
-    //     debugger
-    //     homeToken = await bridgeToken(token)
-    //     debugger
-    //   })
-
-    //   it('second bridge can mint', async () => {
-    //     debugger
-    //     await contract.addBridgePerToken(secondaryBridge.address, homeToken.address, { from: notOwner }).should.be.rejected
-    //     debugger
-    //     await bridgeToken(token, oneEther, false, { bridgeContract: secondaryBridge, otherSideMediator  })
-
-    //     // OtherSideMediator
-    //   })
-    // })
-
     describe('removeBridgePerToken', () => {
       let secondaryBridge
       const notOwner = accounts[1]
@@ -1065,6 +1036,13 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
         expect(await homeToken.isBridge(contract.address)).to.be.equal(false)
         expect(await homeToken.bridgeCount()).to.be.bignumber.equal('0')
         await contract.removeBridgePerToken(contract.address, homeToken.address, { from: owner }).should.be.rejected
+      })
+    })
+
+    describe('upgradeToken', () => {
+      beforeEach(async () => {
+        homeToken = await bridgeToken(token)
+        secondaryBridge = await BridgeMock.new(homeToken.address)
       })
     })
 
