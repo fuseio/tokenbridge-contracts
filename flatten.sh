@@ -15,6 +15,7 @@ mkdir -p flats/amb_native_to_erc20
 mkdir -p flats/amb_erc20_to_native
 mkdir -p flats/multi_amb_erc20_to_erc677
 mkdir -p flats/multi_amb_erc20_to_erc677/multibridge
+mkdir -p flats/migrations
 
 FLATTENER=./node_modules/.bin/truffle-flattener
 BRIDGE_CONTRACTS_DIR=contracts/upgradeable_contracts
@@ -83,3 +84,6 @@ echo "Flattening contracts related to multi-erc-to-erc multibridge on top of AMB
 ${FLATTENER} ${BRIDGE_CONTRACTS_DIR}/multi_amb_erc20_to_erc677/multibridge/PrimaryHomeMultiAMBErc20ToErc677.sol > flats/multi_amb_erc20_to_erc677/multibridge/PrimaryHomeMultiAMBErc20ToErc677_flat.sol
 ${FLATTENER} ${BRIDGE_CONTRACTS_DIR}/multi_amb_erc20_to_erc677/multibridge/SecondaryForeignMultiAMBErc20ToErc677.sol > flats/multi_amb_erc20_to_erc677/multibridge/SecondaryForeignMultiAMBErc20ToErc677_flat.sol
 ${FLATTENER} ${BRIDGE_CONTRACTS_DIR}/multi_amb_erc20_to_erc677/multibridge/SecondaryHomeMultiAMBErc20ToErc677.sol > flats/multi_amb_erc20_to_erc677/multibridge/SecondaryHomeMultiAMBErc20ToErc677_flat.sol
+
+echo "Flattening contracts related to migrations"
+${FLATTENER} ${BRIDGE_CONTRACTS_DIR}/migrations/BridgedTokensMigrator.sol > flats/migrations/BridgedTokensMigrator_flat.sol

@@ -19,7 +19,8 @@ const validBridgeModes = [
   'STAKE_AMB_ERC_TO_ERC',
   'AMB_NATIVE_TO_ERC',
   'AMB_ERC_TO_NATIVE',
-  'MULTI_AMB_ERC_TO_ERC'
+  'MULTI_AMB_ERC_TO_ERC',
+  'BRIDGED_TOKENS_MIGRATOR'
 ]
 const validRewardModes = ['false', 'ONE_DIRECTION', 'BOTH_DIRECTIONS']
 const validFeeManagerTypes = ['BRIDGE_VALIDATORS_REWARD', 'POSDAO_REWARD']

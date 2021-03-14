@@ -44,7 +44,8 @@ function getContracts() {
     HomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/HomeMultiAMBErc20ToErc677.json`),
     SecondaryHomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/SecondaryHomeMultiAMBErc20ToErc677.json`),
     PrimaryHomeMultiAMBErc20ToErc677: require(`../../build/${buildPath}/PrimaryHomeMultiAMBErc20ToErc677.json`),
-    SecondaryForeignMultiAMBErc20ToErc677: require(`../../build/${buildPath}/SecondaryForeignMultiAMBErc20ToErc677.json`)
+    SecondaryForeignMultiAMBErc20ToErc677: require(`../../build/${buildPath}/SecondaryForeignMultiAMBErc20ToErc677.json`),
+    BridgedTokensMigrator: require(`../../build/${buildPath}/BridgedTokensMigrator.json`),
   }
 }
 

@@ -259,6 +259,27 @@ async function deployMultiAMBErcToErc() {
   })
 }
 
+async function deployBridgedTokensMigrator() {
+  const preDeploy = require('./src/migrations/preDeploy')
+  const deployHome = require('./src/migrations/home')
+  const initializeHome = require('./src/migrations/initializeHome')
+  await preDeploy()
+  const { homeTokensMigrator } = await deployHome()
+
+  await initializeHome({
+    homeMigrator: homeTokensMigrator.address
+  })
+
+  console.log('\nDeployment has been completed.\n\n')
+  console.log(`[   Home  ] Bridge Migrator: ${homeTokensMigrator.address}`)
+  writeDeploymentResults({
+    homeMigrator: {
+      homeTokensMigrator
+    }
+  })
+}
+
+
 async function main() {
   console.log(`Bridge mode: ${BRIDGE_MODE}`)
   switch (BRIDGE_MODE) {
@@ -288,6 +309,9 @@ async function main() {
       break
     case 'MULTI_AMB_ERC_TO_ERC':
       await deployMultiAMBErcToErc()
+      break
+    case 'BRIDGED_TOKENS_MIGRATOR':
+      await deployBridgedTokensMigrator()
       break
     default:
       console.log(BRIDGE_MODE)
