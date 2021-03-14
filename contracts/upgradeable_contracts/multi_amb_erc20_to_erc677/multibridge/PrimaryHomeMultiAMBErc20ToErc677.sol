@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "../HomeMultiAMBErc20ToErc677.sol";
 import "../../../interfaces/IBridgeRegistry.sol";
+import "../../../interfaces/IBridgedTokensMigrator.sol";
 
 /**
  * @title PrimaryHomeMultiAMBErc20ToErc677
@@ -42,15 +43,24 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
             symbol = name;
         }
         name = string(abi.encodePacked(name, " on Fuse"));
-        address homeToken = new TokenProxy(tokenImage(), name, symbol, _decimals, bridgeContract().sourceChainId());
+        address homeToken = initializeTokenPair(_token, name, symbol, _decimals);
+        _handleBridgedTokens(ERC677(homeToken), _recipient, _value);
+        emit NewTokenRegistered(_token, homeToken);
+    }
+
+    function initializeTokenPair(
+        address _token,
+        string _name,
+        string _symbol,
+        uint8 _decimals
+    ) internal returns (address) {
+        address homeToken = new TokenProxy(tokenImage(), _name, _symbol, _decimals, bridgeContract().sourceChainId());
         IBridgeRegistry(homeToken).addBridge(address(this));
         _setTokenAddressPair(_token, homeToken);
         _initializeTokenBridgeLimits(homeToken, _decimals);
         _setFee(HOME_TO_FOREIGN_FEE, homeToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
         _setFee(FOREIGN_TO_HOME_FEE, homeToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
-        _handleBridgedTokens(ERC677(homeToken), _recipient, _value);
-
-        emit NewTokenRegistered(_token, homeToken);
+        return homeToken;
     }
 
     /**
@@ -71,21 +81,24 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         IBridgeRegistry(_token).removeBridge(_bridge);
     }
 
-    function upgradeToken(address _token) external onlyOwner {
-        require(isTokenRegistered(_token));
-        DetailedERC20 token = DetailedERC20(_token);
+    function upgradeToken(address _deprecatedToken, IBridgedTokensMigrator migratorContract /*, string name, string symbol, uint8 decimals /*/) external onlyOwner {
+        require(isTokenRegistered(_deprecatedToken));
+        address foreignToken = foreignTokenAddress(_deprecatedToken);
+
+        // unregistering the deprecated token
+        uintStorage[keccak256(abi.encodePacked("minPerTx", _deprecatedToken))] = uint256(0);
+
+        DetailedERC20 token = DetailedERC20(_deprecatedToken);
         string memory name = token.name();
         string memory symbol = token.symbol();
         uint8 decimals = token.decimals();
-        address upgradedToken = new TokenProxy(tokenImage(), name, symbol, decimals, bridgeContract().sourceChainId());
-        IBridgeRegistry(upgradedToken).addBridge(address(this));
+        address upgradedToken = initializeTokenPair(foreignToken, name, symbol, decimals);
+        // Adding migrator contract as a bridge, so it will be able to mint tokens
+        IBridgeRegistry(upgradedToken).addBridge(migratorContract);
+        migratorContract.upgradeToken(_deprecatedToken, upgradedToken);
 
-        _setTokenAddressPair(_token, upgradedToken);
-        _initializeTokenBridgeLimits(upgradedToken, decimals);
-        _setFee(HOME_TO_FOREIGN_FEE, upgradedToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
-        _setFee(FOREIGN_TO_HOME_FEE, upgradedToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
-
-        emit TokenDeprecated(_token);
-        emit NewTokenRegistered(_token, upgradedToken);
+        emit TokenDeprecated(_deprecatedToken);
+        emit NewTokenRegistered(foreignToken, upgradedToken);
     }
+
 }
