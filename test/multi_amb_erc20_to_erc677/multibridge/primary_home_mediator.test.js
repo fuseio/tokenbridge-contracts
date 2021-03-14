@@ -6,7 +6,7 @@ const ERC677BridgeToken = artifacts.require('ERC677BridgeToken.sol')
 const PermittableToken = artifacts.require('ERC677MultiBridgeMintableToken.sol')
 const Sacrifice = artifacts.require('Sacrifice.sol')
 const BridgeMock = artifacts.require('BridgeMock.sol')
-
+const BridgedTokensMigrator = artifacts.require('BridgedTokensMigrator.sol')
 const { expect } = require('chai')
 const { getEvents, expectEventInLogs, ether, strip0x } = require('../../helpers/helpers')
 const { ZERO_ADDRESS, toBN } = require('../../setup')
@@ -1039,10 +1039,27 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
       })
     })
 
-    describe('upgradeToken', () => {
+    describe.only('upgradeToken', () => {
+      let tokensMigrator
       beforeEach(async () => {
         homeToken = await bridgeToken(token)
-        secondaryBridge = await BridgeMock.new(homeToken.address)
+        tokensMigrator = await BridgedTokensMigrator.new()
+        await tokensMigrator.initialize(contract.address).should.be.fulfilled
+        expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(true)
+      })
+
+      it('upgrading token from not an owner should be rejected', async () => {
+        await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: user }).should.be.rejected
+      })
+
+      it('upgrading not registered token should be rejected', async () => {
+        await contract.upgradeToken(token.address, tokensMigrator.address, { from: owner }).should.be.rejected
+      })
+
+      it('upgrading token from owner should pass', async () => {
+        await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
+        expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+        expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
       })
     })
 
