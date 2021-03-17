@@ -81,7 +81,7 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         IBridgeRegistry(_token).removeBridge(_bridge);
     }
 
-    function upgradeToken(address _deprecatedToken, IBridgedTokensMigrator migratorContract /*, string name, string symbol, uint8 decimals /*/) external onlyOwner {
+    function upgradeToken(address _deprecatedToken, IBridgedTokensMigrator migratorContract) external onlyOwner {
         require(isTokenRegistered(_deprecatedToken));
         address foreignToken = foreignTokenAddress(_deprecatedToken);
 

@@ -7,7 +7,7 @@ import "../Initializable.sol";
 
 /**
 * @title BridgedTokensMigrator
-* @dev Migrator of the bridges tokens is used to swap the deprecated token the upgraded one with 1-1 ratio.
+* @dev Migrator of the deprecared bridged tokens is used to swap the deprecated token to the upgraded one in 1-1 ratio.
 * It is design to be used as implementation contract of EternalStorageProxy contract.
 */
 contract BridgedTokensMigrator is Initializable, TokensMigrationManager {
@@ -16,6 +16,8 @@ contract BridgedTokensMigrator is Initializable, TokensMigrationManager {
         address _owner
     ) public onlyRelevantSender returns (bool) {
         require(!isInitialized());
+        require(_owner != address(0));
+
         setOwner(_owner);
         setInitialize();
 

@@ -97,7 +97,6 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
   ]
 
   async function bridgeToken(token, value = oneEther, forceFail = false, options = {}) {
-    debugger
     const bridgeContract = options.bridgeContract || contract
     const otherSideMediatorContract = options.otherSideMediator || otherSideMediator
 
@@ -1064,6 +1063,15 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
         expectEventInLogs(logs, 'NewTokenRegistered')
       })
 
+      it('cannot upgrade already upgraded token', async () => {
+        const { logs } = await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
+        expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+        expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
+
+        await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.rejected
+        await contract.upgradeToken(token.address, tokensMigrator.address, { from: owner }).should.be.rejected
+      })
+
       describe('after upgradeToken', () => {
         let upgradedToken
         beforeEach(async () => {
@@ -1128,7 +1136,17 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           await tokensMigrator.migrateTokens(newToken.address, halfEther, { from: user }).should.be.rejected
         })
 
-        it('cannot call migrateTokens with balabce less than value', async () => {
+        it('cannot migrateTokens with upgraded token', async () => {
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+
+          await homeToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
+          await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
+          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
+        })
+
+        it('cannot call migrateTokens with balance less than value', async () => {
           expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
           expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
 
