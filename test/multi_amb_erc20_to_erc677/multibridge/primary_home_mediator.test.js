@@ -1056,8 +1056,11 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
       })
 
       it('upgrading token from owner should pass', async () => {
+        expect(await contract.withinLimit(homeToken.address, oneEther)).to.be.equal(true)
         const { logs } = await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
         expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+        expect(await contract.maxPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+        expect(await contract.withinLimit(homeToken.address, oneEther)).to.be.equal(false)
         expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
         expectEventInLogs(logs, 'TokenDeprecated')
         expectEventInLogs(logs, 'NewTokenRegistered')
@@ -1110,6 +1113,13 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           expect(await tokensMigrator.upgradedTokenAddress(homeToken.address)).to.be.equal(upgradedToken.address)
           expect(await tokensMigrator.deprecatedTokenAddress(upgradedToken.address)).to.be.equal(homeToken.address)
         })
+
+        it('cannot relay the deprecated token', async () => {
+          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+          await homeToken.approve(contract.address, oneEther, { from: user }).should.be.fulfilled
+          await contract.relayTokens(homeToken.address, halfEther, { from: user }).should.be.rejected
+        })
+
 
         it('migrateTokens is burning old tokens and mints the new one', async () => {
           expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)

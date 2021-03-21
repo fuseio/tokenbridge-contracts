@@ -85,8 +85,10 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         require(isTokenRegistered(_deprecatedToken));
         address foreignToken = foreignTokenAddress(_deprecatedToken);
 
+        // disable relaying the token to foregin network
+        _setMaxPerTx(_deprecatedToken, uint256(0));
         // unregistering the deprecated token
-        uintStorage[keccak256(abi.encodePacked("minPerTx", _deprecatedToken))] = uint256(0);
+        _setMinPerTx(_deprecatedToken, uint256(0));
 
         DetailedERC20 token = DetailedERC20(_deprecatedToken);
         string memory name = token.name();

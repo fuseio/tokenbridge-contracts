@@ -170,7 +170,7 @@ contract BasicMultiTokenBridge is EternalStorage, Ownable {
     function setMaxPerTx(address _token, uint256 _maxPerTx) external onlyOwner {
         require(isTokenRegistered(_token));
         require(_maxPerTx == 0 || (_maxPerTx > minPerTx(_token) && _maxPerTx < dailyLimit(_token)));
-        uintStorage[keccak256(abi.encodePacked("maxPerTx", _token))] = _maxPerTx;
+        _setMaxPerTx(_token, _maxPerTx);
     }
 
     /**
@@ -181,7 +181,7 @@ contract BasicMultiTokenBridge is EternalStorage, Ownable {
     function setMinPerTx(address _token, uint256 _minPerTx) external onlyOwner {
         require(isTokenRegistered(_token));
         require(_minPerTx > 0 && _minPerTx < dailyLimit(_token) && _minPerTx < maxPerTx(_token));
-        uintStorage[keccak256(abi.encodePacked("minPerTx", _token))] = _minPerTx;
+        _setMinPerTx(_token, _minPerTx);
     }
 
     /**
@@ -300,4 +300,13 @@ contract BasicMultiTokenBridge is EternalStorage, Ownable {
             );
         }
     }
+
+    function _setMinPerTx(address _token, uint256 _minPerTx) internal {
+        uintStorage[keccak256(abi.encodePacked("minPerTx", _token))] = _minPerTx;
+    }
+
+    function _setMaxPerTx(address _token, uint256 _maxPerTx) internal {
+        uintStorage[keccak256(abi.encodePacked("maxPerTx", _token))] = _maxPerTx;
+    }
+
 }
