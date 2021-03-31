@@ -19,7 +19,8 @@ const validBridgeModes = [
   'STAKE_AMB_ERC_TO_ERC',
   'AMB_NATIVE_TO_ERC',
   'AMB_ERC_TO_NATIVE',
-  'MULTI_AMB_ERC_TO_ERC'
+  'MULTI_AMB_ERC_TO_ERC',
+  'BRIDGED_TOKENS_MIGRATOR'
 ]
 const validRewardModes = ['false', 'ONE_DIRECTION', 'BOTH_DIRECTIONS']
 const validFeeManagerTypes = ['BRIDGE_VALIDATORS_REWARD', 'POSDAO_REWARD']
@@ -125,6 +126,8 @@ if (BRIDGE_MODE.includes('AMB_')) {
     FOREIGN_MEDIATOR_REQUEST_GAS_LIMIT: bigNumValidator(),
     FOREIGN_MIN_AMOUNT_PER_TX: bigNumValidator(),
     FOREIGN_DAILY_LIMIT: bigNumValidator(),
+    MULTI_AMB_BRIDGE: envalid.bool({ default: false }),
+    SECONDARY_MULTI_AMB_BRIDGE: envalid.bool({ default: false })
   }
 
   if (BRIDGE_MODE !== 'AMB_ERC_TO_NATIVE' && BRIDGE_MODE !== 'MULTI_AMB_ERC_TO_ERC') {

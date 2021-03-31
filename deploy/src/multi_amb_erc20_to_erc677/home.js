@@ -3,14 +3,31 @@ const { web3Home, HOME_RPC_URL } = require('../web3')
 const { deployContract, privateKeyToAddress, upgradeProxy } = require('../deploymentUtils')
 const {
   DEPLOYMENT_ACCOUNT_PRIVATE_KEY,
-  HOME_ERC677_TOKEN_IMAGE
+  HOME_ERC677_TOKEN_IMAGE,
+  SECONDARY_MULTI_AMB_BRIDGE,
+  MULTI_AMB_BRIDGE
 } = require('../loadEnv')
 
 const {
-  homeContracts: { EternalStorageProxy, HomeMultiAMBErc20ToErc677: HomeBridge, ERC677BridgeTokenPermittable }
+  homeContracts: { EternalStorageProxy, HomeMultiAMBErc20ToErc677, SecondaryHomeMultiAMBErc20ToErc677, PrimaryHomeMultiAMBErc20ToErc677, ERC677BridgeTokenPermittable, ERC677MultiBridgeMintableToken }
 } = require('../loadContracts')
 
 const DEPLOYMENT_ACCOUNT_ADDRESS = privateKeyToAddress(DEPLOYMENT_ACCOUNT_PRIVATE_KEY)
+let HomeBridge, ERC677BridgeToken
+
+if (MULTI_AMB_BRIDGE) {
+  ERC677BridgeToken = ERC677MultiBridgeMintableToken
+  if (SECONDARY_MULTI_AMB_BRIDGE) {
+    HomeBridge = SecondaryHomeMultiAMBErc20ToErc677
+  } else {
+    HomeBridge = PrimaryHomeMultiAMBErc20ToErc677
+  }
+} else {
+  HomeBridge = HomeMultiAMBErc20ToErc677
+  ERC677BridgeToken = ERC677BridgeTokenPermittable
+}
+
+console.log(`\n[Home] Using ${HomeBridge.contractName} implementation of Multi AMB bridge`)
 
 async function deployHome() {
   let nonce = await web3Home.eth.getTransactionCount(DEPLOYMENT_ACCOUNT_ADDRESS)
@@ -47,7 +64,7 @@ async function deployHome() {
     const chainId = await web3Home.eth.getChainId()
     assert.strictEqual(chainId > 0, true, 'Invalid chain ID')
     const erc677token = await deployContract(
-      ERC677BridgeTokenPermittable,
+      ERC677BridgeToken,
       ["", "", 0, chainId], 
       { from: DEPLOYMENT_ACCOUNT_ADDRESS, nonce }
     )

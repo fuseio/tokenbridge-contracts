@@ -138,6 +138,8 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
         if (isKnownToken) {
             data = abi.encodeWithSelector(this.handleBridgedTokens.selector, _token, receiver, _value);
         } else {
+            // the other side bridge can be HomeMultiAMBErc20ToErc677 or Primary/Secondary HomeMultiAMBErc20ToErc677.
+            // as the deployAndHandleBridgedTokens function got the same signature
             data = abi.encodeWithSelector(
                 HomeMultiAMBErc20ToErc677(this).deployAndHandleBridgedTokens.selector,
                 _token,

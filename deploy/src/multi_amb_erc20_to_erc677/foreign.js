@@ -5,13 +5,28 @@ const {
   upgradeProxy
 } = require('../deploymentUtils')
 const {
-  foreignContracts: { EternalStorageProxy, ForeignMultiAMBErc20ToErc677: ForeignBridge }
+  foreignContracts: { EternalStorageProxy, ForeignMultiAMBErc20ToErc677, SecondaryForeignMultiAMBErc20ToErc677 }
 } = require('../loadContracts')
 const {
-  DEPLOYMENT_ACCOUNT_PRIVATE_KEY
+  DEPLOYMENT_ACCOUNT_PRIVATE_KEY,
+  SECONDARY_MULTI_AMB_BRIDGE,
+  MULTI_AMB_BRIDGE
 } = require('../loadEnv')
 
 const DEPLOYMENT_ACCOUNT_ADDRESS = privateKeyToAddress(DEPLOYMENT_ACCOUNT_PRIVATE_KEY)
+const ForeignBridge = (MULTI_AMB_BRIDGE && SECONDARY_MULTI_AMB_BRIDGE) ? SecondaryForeignMultiAMBErc20ToErc677 : ForeignMultiAMBErc20ToErc677
+
+if (MULTI_AMB_BRIDGE) {
+  if (SECONDARY_MULTI_AMB_BRIDGE) {
+    HomeBridge = SecondaryForeignMultiAMBErc20ToErc677
+  } else {
+    HomeBridge = ForeignMultiAMBErc20ToErc677
+  }
+} else {
+  HomeBridge = HomeMultiAMBErc20ToErc677
+}
+
+console.log(`\n[Home] Using ${HomeBridge.contractName} implementation of Multi AMB bridge`)
 
 async function deployForeign() {
   let nonce = await web3Foreign.eth.getTransactionCount(DEPLOYMENT_ACCOUNT_ADDRESS)
