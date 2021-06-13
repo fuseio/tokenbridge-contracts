@@ -43,24 +43,22 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
             symbol = name;
         }
         name = string(abi.encodePacked(name, " on Fuse"));
-        address homeToken = initializeTokenPair(_token, name, symbol, _decimals);
+        address homeToken = new TokenProxy(tokenImage(), name, _symbol, _decimals, bridgeContract().sourceChainId());
+        IBridgeRegistry(homeToken).addBridge(address(this));
+        initializeTokenPair(_token, homeToken, _decimals);
         _handleBridgedTokens(ERC677(homeToken), _recipient, _value);
         emit NewTokenRegistered(_token, homeToken);
     }
 
     function initializeTokenPair(
         address _token,
-        string _name,
-        string _symbol,
+        address _homeToken,
         uint8 _decimals
-    ) internal returns (address) {
-        address homeToken = new TokenProxy(tokenImage(), _name, _symbol, _decimals, bridgeContract().sourceChainId());
-        IBridgeRegistry(homeToken).addBridge(address(this));
-        _setTokenAddressPair(_token, homeToken);
-        _initializeTokenBridgeLimits(homeToken, _decimals);
-        _setFee(HOME_TO_FOREIGN_FEE, homeToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
-        _setFee(FOREIGN_TO_HOME_FEE, homeToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
-        return homeToken;
+    ) internal {
+        _setTokenAddressPair(_token, _homeToken);
+        _initializeTokenBridgeLimits(_homeToken, _decimals);
+        _setFee(HOME_TO_FOREIGN_FEE, _homeToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
+        _setFee(FOREIGN_TO_HOME_FEE, _homeToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
     }
 
     /**
@@ -93,10 +91,7 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         uint8 decimals = token.decimals();
         address foreignToken = foreignTokenAddress(_deprecatedToken);
 
-        _setTokenAddressPair(foreignToken, _upgradedToken);
-        _initializeTokenBridgeLimits(_upgradedToken, decimals);
-        _setFee(HOME_TO_FOREIGN_FEE, _upgradedToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
-        _setFee(FOREIGN_TO_HOME_FEE, _upgradedToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
+        initializeTokenPair(foreignToken, _upgradedToken, decimals);
 
         // disable relaying the token to foregin network
         _setMaxPerTx(_deprecatedToken, uint256(0));
