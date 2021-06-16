@@ -2,6 +2,8 @@ pragma solidity 0.4.24;
 
 import "../../interfaces/IBurnableMintableERC677Token.sol";
 import "../Ownable.sol";
+// TODO: Add interface with only methods used to reduce contract size
+import "../multi_amb_erc20_to_erc677/multibridge/PrimaryHomeMultiAMBErc20ToErc677.sol";
 
 
 /**
@@ -12,16 +14,25 @@ contract TokensMigrationManager is Ownable {
     event TokenUpgraded(address indexed deprecatedToken, address indexed upgradedToken);
 
     /**
-     * @dev Registers the pair of the deprecated and upgraded token. Can be called by the contract owner.
-     * Is is assumed that the migration contract has a permissions to mint tokens
+     * @dev Handles upgrading of decprecated token, by deploying a new TokenProxy contract.
+     * Checks if token has already been upgraded and registers the pair of the deprecated and upgraded token.
      * @param _deprecatedToken address of the bridged ERC20/ERC677 deprecated token
-     * @param _upgradedToken address of the bridged ERC20/ERC677 new upgraded token
+     * @param _bridge address of the primary home token bridge
      */
-    function upgradeToken(address _deprecatedToken, address _upgradedToken) public onlyOwner {
+    function upgradeToken(DetailedERC20 _deprecatedToken, PrimaryHomeMultiAMBErc20ToErc677 _bridge) public onlyOwner {
+        address upgradedToken = new TokenProxy(
+            _bridge.tokenImage(), 
+            _deprecatedToken.name(), 
+            _deprecatedToken.symbol(), 
+            _deprecatedToken.decimals(), 
+            _bridge.bridgeContract().sourceChainId()
+        );
+        
         require(upgradedTokenAddress(_deprecatedToken) == address(0));
-        require(deprecatedTokenAddress(_upgradedToken) == address(0));
-        _setDeprecatedTokenAddressPair(_deprecatedToken, _upgradedToken);
-        emit TokenUpgraded(_deprecatedToken, _upgradedToken);
+        require(deprecatedTokenAddress(_deprecatedToken) == address(0));
+        _setDeprecatedTokenAddressPair(_deprecatedToken, upgradedToken);
+        
+        emit TokenUpgraded(_deprecatedToken, upgradedToken);
     }
 
     function _setDeprecatedTokenAddressPair(address _deprecatedToken, address _upgradedToken) internal {
@@ -56,5 +67,23 @@ contract TokensMigrationManager is Ownable {
         _deprecatedToken.transferFrom(msg.sender, address(this), _value);
         IBurnableMintableERC677Token(upgradedToken).mint(msg.sender, _value);
         _deprecatedToken.burn(_value);
+    }
+
+        /**
+     * @dev Adding new bridge to the provided multibridge token. The mew bridge contract will be allowed to mint
+     * @param _bridge address of a new token bridge to another network
+     * @param _token address of the bridged ERC20/ERC677 token on the home side.
+     */
+    function addBridgePerToken(address _bridge, address _token) external onlyOwner {
+        IBridgeRegistry(_token).addBridge(_bridge);
+    }
+
+    /**
+     * @dev Removing the bridge from the provided multibridge token. The bridge contract will be restricted from minting
+     * @param _bridge address of a new token bridge to another network
+     * @param _token address of the bridged ERC677MultiBridgeMintableToken token on the home side.
+     */
+    function removeBridgePerToken(address _bridge, address _token) external onlyOwner {
+        IBridgeRegistry(_token).removeBridge(_bridge);
     }
 }
