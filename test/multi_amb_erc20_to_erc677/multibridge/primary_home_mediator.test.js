@@ -1039,7 +1039,8 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
     })
 
     describe('upgradeToken', () => {
-      let tokensMigrator, upgradedToken
+      let tokensMigrator
+      let upgradedToken
       beforeEach(async () => {
         homeToken = await bridgeToken(token)
         upgradedToken = await PermittableToken.new('TEST on Fuse', 'TST', 18, 1337)
@@ -1086,8 +1087,7 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
           expect(await contract.isTokenRegistered(upgradedToken.address)).to.be.equal(true)
 
-          // expect(await contract.homeTokenAddress(token.address)).to.be.equal(homeToken.address)
-//
+          expect(await contract.homeTokenAddress(token.address)).to.be.equal(upgradedToken.address)
         })
 
         it('upgrading token emits the correct events', async () => {
@@ -1104,30 +1104,19 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           expect(events.length).to.be.equal(1)
           expect(events[0].returnValues.token).to.be.equal(homeToken.address)
         })
-  
+
         it('upgrading token defines default limits', async () => {
-          // expect(await upgradedToken.isBridge(tokensMigrator.address)).to.be.equal(true)
-  
           expect(await contract.dailyLimit(upgradedToken.address)).to.be.bignumber.equal(dailyLimit)
           expect(await contract.maxPerTx(upgradedToken.address)).to.be.bignumber.equal(maxPerTx)
           expect(await contract.minPerTx(upgradedToken.address)).to.be.bignumber.equal(minPerTx)
-          expect(await contract.executionDailyLimit(upgradedToken.address)).to.be.bignumber.equal(
-            executionDailyLimit
-          )
-          expect(await contract.executionMaxPerTx(upgradedToken.address)).to.be.bignumber.equal(
-            executionMaxPerTx
-          )
+          expect(await contract.executionDailyLimit(upgradedToken.address)).to.be.bignumber.equal(executionDailyLimit)
+          expect(await contract.executionMaxPerTx(upgradedToken.address)).to.be.bignumber.equal(executionMaxPerTx)
         })
 
         it('upgrading token creates correct token pair', async () => {
           expect(await contract.homeTokenAddress(token.address)).to.be.equal(upgradedToken.address)
           expect(await contract.foreignTokenAddress(upgradedToken.address)).to.be.equal(token.address)
         })
-
-        // it('upgrading token registered correctly on the token migrator contract', async () => {
-        //   expect(await tokensMigrator.upgradedTokenAddress(homeToken.address)).to.be.equal(upgradedToken.address)
-        //   expect(await tokensMigrator.deprecatedTokenAddress(upgradedToken.address)).to.be.equal(homeToken.address)
-        // })
 
         it('cannot relay the deprecated token', async () => {
           expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
@@ -1142,55 +1131,8 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           expect(await contract.homeTokenAddress(token.address)).to.be.equal(homeToken.address)
           expect(await contract.foreignTokenAddress(homeToken.address)).to.be.equal(token.address)
         })
-
-
-      //   it('migrateTokens is burning old tokens and mints the new one', async () => {
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-      //     await homeToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-      //     await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-
-      //     await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-
-      //     await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.rejected
-      //   })
-
-      //   it('cannot migrateTokens not registered token', async () => {
-      //     const newToken = await ERC677BridgeToken.new('TEST', 'TST', 18)
-      //     await newToken.mint(user, twoEthers, { from: owner }).should.be.fulfilled
-      //     expect(await newToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
-
-      //     await newToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-      //     await tokensMigrator.migrateTokens(newToken.address, halfEther, { from: user }).should.be.rejected
-      //   })
-
-      //   it('cannot migrateTokens with upgraded token', async () => {
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-      //     await homeToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-      //     await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-      //   })
-
-      //   it('cannot call migrateTokens with balance less than value', async () => {
-      //     expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-      //     expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-      //     await homeToken.approve(tokensMigrator.address, twoEthers, { from: user }).should.be.fulfilled
-      //     await tokensMigrator.migrateTokens(homeToken.address, twoEthers, { from: user }).should.be.rejected
-      //   })
       })
-
-
     })
-
   })
 
   describe('fees management', () => {

@@ -85,23 +85,34 @@ contract.only('BridgedTokensMigrator', async accounts => {
         })
 
         it('upgrading token from owner should deploy new upgraded token', async () => {
-          const { logs } = await contract.upgradeToken(deprecatedToken.address, bridge.address, { from: owner }).should
-            .be.fulfilled
+          await contract.upgradeToken(deprecatedToken.address, bridge.address, { from: owner }).should.be.fulfilled
           const events = await getEvents(contract, { event: 'TokenUpgraded' })
-          const deprecatedTokenAddress = events[0].returnValues.deprecatedToken
           const upgradedTokenAddress = events[0].returnValues.upgradedToken
-
-          expectEventInLogs(logs, 'TokenUpgraded')
-          expect(events.length).to.be.equal(1)
-          expect(deprecatedTokenAddress).to.be.equal(deprecatedToken.address)
-
-          expect(await contract.upgradedTokenAddress(deprecatedToken.address)).to.be.equal(upgradedTokenAddress)
-          expect(await contract.deprecatedTokenAddress(upgradedTokenAddress)).to.be.equal(deprecatedToken.address)
 
           const upgradedToken = await ERC677MultiBridgeMintableToken.at(upgradedTokenAddress)
           expect(await upgradedToken.name()).to.be.equal(await deprecatedToken.name())
           expect(await upgradedToken.symbol()).to.be.equal(await deprecatedToken.symbol())
           expect(await upgradedToken.decimals()).to.be.bignumber.equal(await deprecatedToken.decimals())
+        })
+
+        it('upgrading token from owner should register tokens', async () => {
+          await contract.upgradeToken(deprecatedToken.address, bridge.address, { from: owner }).should.be.fulfilled
+          const events = await getEvents(contract, { event: 'TokenUpgraded' })
+          const upgradedTokenAddress = events[0].returnValues.upgradedToken
+
+          expect(await contract.upgradedTokenAddress(deprecatedToken.address)).to.be.equal(upgradedTokenAddress)
+          expect(await contract.deprecatedTokenAddress(upgradedTokenAddress)).to.be.equal(deprecatedToken.address)
+        })
+
+        it('upgrading token from owner should emit events', async () => {
+          const { logs } = await contract.upgradeToken(deprecatedToken.address, bridge.address, { from: owner }).should
+            .be.fulfilled
+          const events = await getEvents(contract, { event: 'TokenUpgraded' })
+          const deprecatedTokenAddress = events[0].returnValues.deprecatedToken
+
+          expectEventInLogs(logs, 'TokenUpgraded')
+          expect(events.length).to.be.equal(1)
+          expect(deprecatedTokenAddress).to.be.equal(deprecatedToken.address)
         })
 
         it('migrate tokens should be rejected if tokens are not registered', async () => {
@@ -144,7 +155,7 @@ contract.only('BridgedTokensMigrator', async accounts => {
               await contract.addBridgePerToken(contract.address, upgradedToken.address, { from: owner })
               await deprecatedToken.approve(contract.address, oneEther, { from: user }).should.be.fulfilled
 
-              await contract.migrateTokens(deprecatedToken.address, oneEther, { from: user })
+              await contract.migrateTokens(deprecatedToken.address, oneEther, { from: user }).should.be.fulfilled
 
               expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
               expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
@@ -155,6 +166,45 @@ contract.only('BridgedTokensMigrator', async accounts => {
               await deprecatedToken.approve(contract.address, oneEther, { from: user }).should.be.fulfilled
 
               await contract.migrateTokens(deprecatedToken.address, oneEther, { from: user }).should.be.rejected
+            })
+
+            it('migrate tokens is burning old tokens and mints the new one', async () => {
+              await deprecatedToken.mint(user, oneEther).should.be.fulfilled
+              expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+              expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+
+              await deprecatedToken.approve(contract.address, oneEther, { from: user }).should.be.fulfilled
+              await contract.addBridgePerToken(contract.address, upgradedToken.address, { from: owner }).should.be
+                .fulfilled
+              await contract.migrateTokens(deprecatedToken.address, halfEther, { from: user }).should.be.fulfilled
+              expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
+              expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
+
+              await contract.migrateTokens(deprecatedToken.address, halfEther, { from: user }).should.be.fulfilled
+              expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+              expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+
+              await contract.migrateTokens(deprecatedToken.address, halfEther, { from: user }).should.be.rejected
+            })
+
+            it('cannot migrateTokens with upgraded token', async () => {
+              await deprecatedToken.mint(user, oneEther).should.be.fulfilled
+              expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+              expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+
+              await deprecatedToken.approve(contract.address, oneEther, { from: user }).should.be.fulfilled
+              await contract.addBridgePerToken(contract.address, upgradedToken.address, { from: owner }).should.be
+                .fulfilled
+              await contract.migrateTokens(upgradedToken.address, halfEther, { from: user }).should.be.rejected
+            })
+
+            it('cannot call migrateTokens with balance less than value', async () => {
+              await deprecatedToken.mint(user, oneEther).should.be.fulfilled
+              expect(await deprecatedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
+              expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
+
+              await deprecatedToken.approve(contract.address, twoEthers, { from: user }).should.be.fulfilled
+              await contract.migrateTokens(deprecatedToken.address, twoEthers, { from: user }).should.be.rejected
             })
           })
 

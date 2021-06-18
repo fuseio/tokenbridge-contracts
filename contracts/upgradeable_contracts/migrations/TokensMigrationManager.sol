@@ -1,10 +1,16 @@
 pragma solidity 0.4.24;
 
+import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "../../interfaces/IBurnableMintableERC677Token.sol";
+import "../../interfaces/IAMB.sol";
+import "../../interfaces/IBridgeRegistry.sol";
 import "../Ownable.sol";
-// TODO: Add interface with only methods used to reduce contract size
-import "../multi_amb_erc20_to_erc677/multibridge/PrimaryHomeMultiAMBErc20ToErc677.sol";
+import "../multi_amb_erc20_to_erc677/TokenProxy.sol";
 
+interface IPrimaryHomeMultiAMBErc20ToErc677 {
+    function tokenImage() external view returns (address);
+    function bridgeContract() external view returns (IAMB);
+}
 
 /**
 * @title TokensMigrationManager
@@ -19,7 +25,7 @@ contract TokensMigrationManager is Ownable {
      * @param _deprecatedToken address of the bridged ERC20/ERC677 deprecated token
      * @param _bridge address of the primary home token bridge
      */
-    function upgradeToken(DetailedERC20 _deprecatedToken, PrimaryHomeMultiAMBErc20ToErc677 _bridge) public onlyOwner {
+    function upgradeToken(DetailedERC20 _deprecatedToken, IPrimaryHomeMultiAMBErc20ToErc677 _bridge) public onlyOwner {
         address upgradedToken = new TokenProxy(
             _bridge.tokenImage(), 
             _deprecatedToken.name(), 
