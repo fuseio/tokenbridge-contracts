@@ -2,15 +2,10 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC20/DetailedERC20.sol";
 import "../../interfaces/IBurnableMintableERC677Token.sol";
-import "../../interfaces/IAMB.sol";
 import "../../interfaces/IBridgeRegistry.sol";
+import "../../interfaces/IPrimaryHomeMultiAMBErc20ToErc677.sol";
 import "../Ownable.sol";
 import "../multi_amb_erc20_to_erc677/TokenProxy.sol";
-
-interface IPrimaryHomeMultiAMBErc20ToErc677 {
-    function tokenImage() external view returns (address);
-    function bridgeContract() external view returns (IAMB);
-}
 
 /**
 * @title TokensMigrationManager
