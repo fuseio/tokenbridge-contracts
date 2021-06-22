@@ -23,4 +23,13 @@ contract BridgedTokensMigrator is Initializable, TokensMigrationManager {
 
         return isInitialized();
     }
+
+    /**
+     * @dev Allows the current owner or proxy to transfer control of the contract to a newOwner
+     * @param newOwner the address to transfer ownership to
+     */
+    function transferOwnership(address newOwner) external onlyRelevantSender {
+        require(newOwner != address(0));
+        setOwner(newOwner);
+    }
 }

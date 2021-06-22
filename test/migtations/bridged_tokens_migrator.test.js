@@ -3,6 +3,7 @@ const ERC677MultiBridgeMintableToken = artifacts.require('ERC677MultiBridgeMinta
 const BridgedTokensMigrator = artifacts.require('BridgedTokensMigrator.sol')
 const PrimaryHomeMultiAMBErc20ToErc677 = artifacts.require('PrimaryHomeMultiAMBErc20ToErc677.sol')
 const ForeignMultiAMBErc20ToErc677 = artifacts.require('ForeignMultiAMBErc20ToErc677.sol')
+const EternalStorageProxy = artifacts.require('EternalStorageProxy.sol')
 const AMBMock = artifacts.require('AMBMock.sol')
 const BridgeMock = artifacts.require('BridgeMock.sol')
 const { expect } = require('chai')
@@ -281,6 +282,34 @@ contract.only('BridgedTokensMigrator', async accounts => {
           })
         })
       })
+    })
+  })
+
+  describe('transferOwnership', () => {
+    let storage
+    beforeEach(async () => {
+      storage = await EternalStorageProxy.new()
+    })
+
+    it('should allow change owner', async () => {
+      expect(await contract.owner()).to.be.equal(ZERO_ADDRESS)
+      await contract.transferOwnership(user).should.be.fulfilled
+      expect(await contract.owner()).to.be.equal(user)
+    })
+
+    it('should allow proxy to change owner on upgrade', async () => {
+      expect(await storage.implementation()).to.be.equal(ZERO_ADDRESS)
+
+      await storage.upgradeTo('1', contract.address).should.be.fulfilled
+      contract = await BridgedTokensMigrator.at(storage.address)
+
+      expect(await contract.owner()).to.be.equal(ZERO_ADDRESS)
+
+      const data = contract.contract.methods.transferOwnership(owner).encodeABI()
+      const newTokenMigrator = await BridgedTokensMigrator.new()
+      await storage.upgradeToAndCall('2', newTokenMigrator.address, data).should.be.fulfilled
+
+      expect(await contract.owner()).to.be.equal(owner)
     })
   })
 })
