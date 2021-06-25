@@ -70,7 +70,7 @@ contract TokensMigrationManager is Ownable {
         _deprecatedToken.burn(_value);
     }
 
-        /**
+    /**
      * @dev Adding new bridge to the provided multibridge token. The mew bridge contract will be allowed to mint
      * @param _bridge address of a new token bridge to another network
      * @param _token address of the bridged ERC20/ERC677 token on the home side.
