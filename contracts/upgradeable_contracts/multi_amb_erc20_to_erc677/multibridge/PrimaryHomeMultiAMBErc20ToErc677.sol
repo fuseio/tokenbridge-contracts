@@ -51,6 +51,12 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         emit NewTokenRegistered(_token, homeToken);
     }
 
+    /**
+     * @dev Registers the token pair then sets the default bridge limits and fees.
+     * @param _token address of the bridged ERC20/ERC677 token on the foreign side.
+     * @param homeToken address of the bridged ERC20/ERC677 token on the home side.
+     * @param _decimals deciamls of the bridged foreign token.
+     */
     function initializeTokenPair(
         address _token,
         address homeToken,
@@ -92,10 +98,6 @@ contract PrimaryHomeMultiAMBErc20ToErc677 is HomeMultiAMBErc20ToErc677 {
         uint8 decimals = token.decimals();
         address foreignToken = foreignTokenAddress(_deprecatedToken);
 
-        // _setTokenAddressPair(foreignToken, _upgradedToken);
-        // _initializeTokenBridgeLimits(_upgradedToken, decimals);
-        // _setFee(HOME_TO_FOREIGN_FEE, _upgradedToken, getFee(HOME_TO_FOREIGN_FEE, address(0)));
-        // _setFee(FOREIGN_TO_HOME_FEE, _upgradedToken, getFee(FOREIGN_TO_HOME_FEE, address(0)));
         initializeTokenPair(foreignToken, _upgradedToken, decimals);
 
         // disable relaying the token to foregin network

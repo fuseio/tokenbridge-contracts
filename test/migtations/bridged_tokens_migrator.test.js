@@ -21,7 +21,7 @@ const minPerTx = ether('0.01')
 const executionDailyLimit = dailyLimit
 const executionMaxPerTx = maxPerTx
 
-contract.only('BridgedTokensMigrator', async accounts => {
+contract('BridgedTokensMigrator', async accounts => {
   const owner = accounts[0]
   const user = accounts[1]
 
