@@ -1040,78 +1040,82 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
 
     describe('upgradeToken', () => {
       let tokensMigrator
+      let upgradedToken
       beforeEach(async () => {
         homeToken = await bridgeToken(token)
+        upgradedToken = await PermittableToken.new('TEST on Fuse', 'TST', 18, 1337)
         tokensMigrator = await BridgedTokensMigrator.new()
         await tokensMigrator.initialize(contract.address).should.be.fulfilled
         expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(true)
       })
 
       it('upgrading token from not an owner should be rejected', async () => {
-        await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: user }).should.be.rejected
+        await contract.upgradeToken(homeToken.address, upgradedToken.address, { from: user }).should.be.rejected
       })
 
       it('upgrading not registered token should be rejected', async () => {
-        await contract.upgradeToken(token.address, tokensMigrator.address, { from: owner }).should.be.rejected
+        await contract.upgradeToken(token.address, upgradedToken.address, { from: owner }).should.be.rejected
       })
 
       it('upgrading token from owner should pass', async () => {
         expect(await contract.withinLimit(homeToken.address, oneEther)).to.be.equal(true)
-        const { logs } = await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
-        expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
-        expect(await contract.maxPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
-        expect(await contract.withinLimit(homeToken.address, oneEther)).to.be.equal(false)
+        await contract.upgradeToken(homeToken.address, upgradedToken.address, { from: owner }).should.be.fulfilled
         expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
-        expectEventInLogs(logs, 'TokenDeprecated')
-        expectEventInLogs(logs, 'NewTokenRegistered')
+        expect(await contract.isTokenRegistered(upgradedToken.address)).to.be.equal(true)
       })
 
       it('cannot upgrade already upgraded token', async () => {
-        const { logs } = await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
+        await contract.upgradeToken(homeToken.address, upgradedToken.address, { from: owner }).should.be.fulfilled
         expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
         expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
 
-        await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.rejected
-        await contract.upgradeToken(token.address, tokensMigrator.address, { from: owner }).should.be.rejected
+        await contract.upgradeToken(homeToken.address, upgradedToken.address, { from: owner }).should.be.rejected
+        await contract.upgradeToken(token.address, upgradedToken.address, { from: owner }).should.be.rejected
       })
 
       describe('after upgradeToken', () => {
-        let upgradedToken
+        let logs
         beforeEach(async () => {
-          await contract.upgradeToken(homeToken.address, tokensMigrator.address, { from: owner }).should.be.fulfilled
-          
-          const fromBlock = (await web3.eth.getBlock("latest")).number
-          const events = await getEvents(contract, { event: 'NewTokenRegistered' }, fromBlock)
-          expect(events.length).to.be.equal(1)
-          expect(events[0].returnValues.foreignToken).to.be.equal(token.address)
-          upgradedToken = await PermittableToken.at(events[0].returnValues.homeToken)
+          let response = await contract.upgradeToken(homeToken.address, upgradedToken.address, { from: owner }).should.be.fulfilled
+          logs = response.logs
         })
 
-        it('upgrading token creates token similar to the original', async () => {
-          expect(await upgradedToken.isBridge(tokensMigrator.address)).to.be.equal(true)
-  
-          expect(await upgradedToken.name()).to.be.equal(await homeToken.name())
-          expect(await upgradedToken.symbol()).to.be.equal(await homeToken.symbol())
-          expect(await upgradedToken.decimals()).to.be.bignumber.equal(await homeToken.decimals())
+        it('upgrading token halts relaying of the deprecated token', async () => {
+          expect(await contract.minPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+          expect(await contract.maxPerTx(homeToken.address)).to.be.bignumber.equal(ZERO)
+          expect(await contract.withinLimit(homeToken.address, oneEther)).to.be.equal(false)
+          expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(false)
+          expect(await contract.isTokenRegistered(upgradedToken.address)).to.be.equal(true)
+
+          expect(await contract.homeTokenAddress(token.address)).to.be.equal(upgradedToken.address)
         })
-  
+
+        it('upgrading token emits the correct events', async () => {
+          expectEventInLogs(logs, 'TokenDeprecated')
+          expectEventInLogs(logs, 'NewTokenRegistered')
+
+          const fromBlock = (await web3.eth.getBlock("latest")).number
+          let events = await getEvents(contract, { event: 'NewTokenRegistered' }, fromBlock)
+          expect(events.length).to.be.equal(1)
+          expect(events[0].returnValues.foreignToken).to.be.equal(token.address)
+          expect(events[0].returnValues.homeToken).to.be.equal(upgradedToken.address)
+
+          events = await getEvents(contract, { event: 'TokenDeprecated' }, fromBlock)
+          expect(events.length).to.be.equal(1)
+          expect(events[0].returnValues.token).to.be.equal(homeToken.address)
+        })
+
         it('upgrading token defines default limits', async () => {
-          expect(await upgradedToken.isBridge(tokensMigrator.address)).to.be.equal(true)
-  
           expect(await contract.dailyLimit(upgradedToken.address)).to.be.bignumber.equal(dailyLimit)
           expect(await contract.maxPerTx(upgradedToken.address)).to.be.bignumber.equal(maxPerTx)
           expect(await contract.minPerTx(upgradedToken.address)).to.be.bignumber.equal(minPerTx)
-          expect(await contract.executionDailyLimit(upgradedToken.address)).to.be.bignumber.equal(
-            executionDailyLimit
-          )
-          expect(await contract.executionMaxPerTx(upgradedToken.address)).to.be.bignumber.equal(
-            executionMaxPerTx
-          )
+          expect(await contract.executionDailyLimit(upgradedToken.address)).to.be.bignumber.equal(executionDailyLimit)
+          expect(await contract.executionMaxPerTx(upgradedToken.address)).to.be.bignumber.equal(executionMaxPerTx)
         })
 
-        it('upgrading token registered correctly on the token migrator contract', async () => {
-          expect(await tokensMigrator.upgradedTokenAddress(homeToken.address)).to.be.equal(upgradedToken.address)
-          expect(await tokensMigrator.deprecatedTokenAddress(upgradedToken.address)).to.be.equal(homeToken.address)
+        it('upgrading token creates correct token pair', async () => {
+          expect(await contract.homeTokenAddress(token.address)).to.be.equal(upgradedToken.address)
+          expect(await contract.foreignTokenAddress(upgradedToken.address)).to.be.equal(token.address)
         })
 
         it('cannot relay the deprecated token', async () => {
@@ -1120,54 +1124,15 @@ contract('PrimaryHomeMultiAMBErc20ToErc677', async accounts => {
           await contract.relayTokens(homeToken.address, halfEther, { from: user }).should.be.rejected
         })
 
-
-        it('migrateTokens is burning old tokens and mints the new one', async () => {
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-          await homeToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-          await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-
-          await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-
-          await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.rejected
-        })
-
-        it('cannot migrateTokens not registered token', async () => {
-          const newToken = await ERC677BridgeToken.new('TEST', 'TST', 18)
-          await newToken.mint(user, twoEthers, { from: owner }).should.be.fulfilled
-          expect(await newToken.balanceOf(user)).to.be.bignumber.equal(twoEthers)
-
-          await newToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-          await tokensMigrator.migrateTokens(newToken.address, halfEther, { from: user }).should.be.rejected
-        })
-
-        it('cannot migrateTokens with upgraded token', async () => {
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-          await homeToken.approve(tokensMigrator.address, oneEther, { from: user }).should.be.fulfilled
-          await tokensMigrator.migrateTokens(homeToken.address, halfEther, { from: user }).should.be.fulfilled
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(halfEther)
-        })
-
-        it('cannot call migrateTokens with balance less than value', async () => {
-          expect(await homeToken.balanceOf(user)).to.be.bignumber.equal(oneEther)
-          expect(await upgradedToken.balanceOf(user)).to.be.bignumber.equal(ZERO)
-
-          await homeToken.approve(tokensMigrator.address, twoEthers, { from: user }).should.be.fulfilled
-          await tokensMigrator.migrateTokens(homeToken.address, twoEthers, { from: user }).should.be.rejected
+        it('the upgrade can be reverted by upgrading to the deprecated token again', async () => {
+          await contract.upgradeToken(upgradedToken.address, homeToken.address, { from: owner }).should.be.fulfilled
+          expect(await contract.isTokenRegistered(homeToken.address)).to.be.equal(true)
+          expect(await contract.isTokenRegistered(upgradedToken.address)).to.be.equal(false)
+          expect(await contract.homeTokenAddress(token.address)).to.be.equal(homeToken.address)
+          expect(await contract.foreignTokenAddress(homeToken.address)).to.be.equal(token.address)
         })
       })
-
-
     })
-
   })
 
   describe('fees management', () => {

@@ -58,7 +58,7 @@ fi
 if [ "$SOLIDITY_COVERAGE" = true ]; then
   node --max-old-space-size=4096 node_modules/.bin/truffle test 2>/dev/null; istanbul report lcov
 else
-  node_modules/.bin/truffle test --network ganache  "$@"
+  node_modules/.bin/truffle test --stacktrace --network ganache  "$@"
   #  node --inspect node_modules/.bin/truffle test --network ganache  "$@"
 
 fi
