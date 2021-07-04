@@ -18,7 +18,7 @@ contract BridgedTokensMigrator is Initializable, TokensMigrationManager {
         require(!isInitialized());
         require(_owner != address(0));
 
-        setOwner(_owner);
+        _setOwner(_owner);
         setInitialize();
 
         return isInitialized();

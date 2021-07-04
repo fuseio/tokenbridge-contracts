@@ -10,6 +10,7 @@ contract BasicAMB is BasicBridge, VersionableAMB {
     bytes32 internal constant SOURCE_CHAIN_ID_LENGTH = 0xe504ae1fd6471eea80f18b8532a61a9bb91fba4f5b837f80a1cfb6752350af44; // keccak256(abi.encodePacked("sourceChainIdLength"))
     bytes32 internal constant DESTINATION_CHAIN_ID = 0xbbd454018e72a3f6c02bbd785bacc49e46292744f3f6761276723823aa332320; // keccak256(abi.encodePacked("destinationChainId"))
     bytes32 internal constant DESTINATION_CHAIN_ID_LENGTH = 0xfb792ae4ad11102b93f26a51b3749c2b3667f8b561566a4806d4989692811594; // keccak256(abi.encodePacked("destinationChainIdLength"))
+    bytes32 internal constant ALLOW_REENTRANT_REQUESTS = 0xffa3a5a0e192028fc343362a39c5688e5a60819a4dc5ab3ee70c25bc25b78dd6; // keccak256(abi.encodePacked("allowReentrantRequests"))
 
     /**
      * Initializes AMB contract
@@ -39,7 +40,7 @@ contract BasicAMB is BasicBridge, VersionableAMB {
         uintStorage[MAX_GAS_PER_TX] = _maxGasPerTx;
         _setGasPrice(_gasPrice);
         _setRequiredBlockConfirmations(_requiredBlockConfirmations);
-        setOwner(_owner);
+        _setOwner(_owner);
         setInitialize();
 
         return isInitialized();
@@ -83,6 +84,24 @@ contract BasicAMB is BasicBridge, VersionableAMB {
     }
 
     /**
+     * Sets the flag to allow passing new AMB requests in the opposite direction,
+     * while other AMB message is being processed.
+     * Only owner can call this method.
+     * @param _enable true, if reentrant requests are allowed.
+     */
+    function setAllowReentrantRequests(bool _enable) external onlyOwner {
+        boolStorage[ALLOW_REENTRANT_REQUESTS] = _enable;
+    }
+
+    /**
+     * Tells if passing reentrant requests is allowed.
+     * @return true, if reentrant requests are allowed.
+     */
+    function allowReentrantRequests() public view returns (bool) {
+        return boolStorage[ALLOW_REENTRANT_REQUESTS];
+    }
+
+    /**
      * Internal function for retrieving current nonce value
      * @return nonce value
      */
@@ -106,6 +125,11 @@ contract BasicAMB is BasicBridge, VersionableAMB {
     function _setChainIds(uint256 _sourceChainId, uint256 _destinationChainId) internal {
         require(_sourceChainId > 0 && _destinationChainId > 0);
         require(_sourceChainId != _destinationChainId);
+
+        // Length fields are needed further when encoding the message.
+        // Chain ids are compressed, so that leading zero bytes are not preserved.
+        // In order to save some gas during calls to MessageDelivery.c,
+        // lengths of chain ids are precalculated and being saved in the storage.
         uint256 sourceChainIdLength = 0;
         uint256 destinationChainIdLength = 0;
         uint256 mask = 0xff;

@@ -61,8 +61,8 @@ contract HomeAMBErc20ToNative is BasicAMBErc20ToNative, BlockRewardBridge, HomeF
     * @param _decimalShift number of decimals shift required to adjust the amount of tokens bridged.
     * @param _owner address of the owner of the mediator contract
     * @param _blockReward address of the block reward contract
-    * @param _rewardAddreses list of reward addresses, between whom fees will be distributed
-    * @param _fees array with initial fees for both bridge firections
+    * @param _rewardAddresses list of reward addresses, between whom fees will be distributed
+    * @param _fees array with initial fees for both bridge directions
     *   [ 0 = homeToForeignFee, 1 = foreignToHomeFee ]
     */
     function rewardableInitialize(
@@ -74,10 +74,10 @@ contract HomeAMBErc20ToNative is BasicAMBErc20ToNative, BlockRewardBridge, HomeF
         int256 _decimalShift,
         address _owner,
         address _blockReward,
-        address[] _rewardAddreses,
+        address[] _rewardAddresses,
         uint256[2] _fees // [ 0 = homeToForeignFee, 1 = foreignToHomeFee ]
     ) external returns (bool) {
-        _setRewardAddressList(_rewardAddreses);
+        _setRewardAddressList(_rewardAddresses);
         _setFee(HOME_TO_FOREIGN_FEE, _fees[0]);
         _setFee(FOREIGN_TO_HOME_FEE, _fees[1]);
         return
@@ -202,12 +202,13 @@ contract HomeAMBErc20ToNative is BasicAMBErc20ToNative, BlockRewardBridge, HomeF
     }
 
     /**
-    * @dev Allows to transfer any locked token on this contract that is not part of the bridge operations.
-    * Native tokens are not allowed to be claimed.
-    * @param _token address of the token.
+    * @dev Allows to transfer any locked tokens or native coins on this contract.
+    * @param _token address of the token, address(0) for native coins.
     * @param _to address that will receive the locked tokens on this contract.
     */
-    function claimTokens(address _token, address _to) external onlyIfUpgradeabilityOwner validAddress(_to) {
+    function claimTokens(address _token, address _to) external onlyIfUpgradeabilityOwner {
+        // In case native coins were forced into this contract by using a selfdestruct opcode,
+        // they should be handled by a call to fixMediatorBalance, instead of using a claimTokens function.
         require(_token != address(0));
         claimValues(_token, _to);
     }
@@ -217,7 +218,7 @@ contract HomeAMBErc20ToNative is BasicAMBErc20ToNative, BlockRewardBridge, HomeF
     * without the invocation of the required methods.
     * @param _receiver the address that will receive the tokens on the other network
     */
-    function fixMediatorBalance(address _receiver) external onlyIfUpgradeabilityOwner {
+    function fixMediatorBalance(address _receiver) external onlyIfUpgradeabilityOwner validAddress(_receiver) {
         uint256 balance = address(this).balance;
         uint256 available = maxAvailablePerTx();
         if (balance > available) {

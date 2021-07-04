@@ -35,14 +35,13 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
         address _owner
     ) external onlyRelevantSender returns (bool) {
         require(!isInitialized());
-        require(_owner != address(0));
 
         _setBridgeContract(_bridgeContract);
         _setMediatorContractOnOtherSide(_mediatorContract);
         _setLimits(address(0), _dailyLimitMaxPerTxMinPerTxArray);
         _setExecutionLimits(address(0), _executionDailyLimitExecutionMaxPerTxArray);
         _setRequestGasLimit(_requestGasLimit);
-        setOwner(_owner);
+        _setOwner(_owner);
 
         setInitialize();
 
@@ -57,8 +56,7 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
      */
     function executeActionOnBridgedTokens(address _token, address _recipient, uint256 _value) internal {
         bytes32 _messageId = messageId();
-        _token.safeTransfer(_recipient, _value);
-        _setMediatorBalance(_token, mediatorBalance(_token).sub(_value));
+        _releaseTokens(_token, _recipient, _value);
         emit TokensBridged(_token, _recipient, _value, _messageId);
     }
 
@@ -71,7 +69,7 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     function onTokenTransfer(address _from, uint256 _value, bytes _data) public returns (bool) {
         if (!lock()) {
             ERC677 token = ERC677(msg.sender);
-            bridgeSpecificActionsOnTokenTransfer(token, _from, _value, _data);
+            bridgeSpecificActionsOnTokenTransfer(token, _from, chooseReceiver(_from, _data), _value);
         }
         return true;
     }
@@ -105,19 +103,19 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
         setLock(true);
         token.safeTransferFrom(msg.sender, _value);
         setLock(false);
-        bridgeSpecificActionsOnTokenTransfer(token, msg.sender, _value, abi.encodePacked(_receiver));
+        bridgeSpecificActionsOnTokenTransfer(token, msg.sender, _receiver, _value);
     }
 
     /**
      * @dev Executes action on deposit of bridged tokens
      * @param _token address of the token contract
      * @param _from address of tokens sender
-     * @param _value requsted amount of bridged tokens
-     * @param _data alternative receiver, if specified
+     * @param _receiver address of tokens receiver on the other side
+     * @param _value requested amount of bridged tokens
      */
-    function bridgeSpecificActionsOnTokenTransfer(ERC677 _token, address _from, uint256 _value, bytes _data) internal {
-        if (lock()) return;
-
+    function bridgeSpecificActionsOnTokenTransfer(ERC677 _token, address _from, address _receiver, uint256 _value)
+        internal
+    {
         bool isKnownToken = isTokenRegistered(_token);
         if (!isKnownToken) {
             string memory name = TokenReader.readName(_token);
@@ -133,10 +131,9 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
         addTotalSpentPerDay(_token, getCurrentDay(), _value);
 
         bytes memory data;
-        address receiver = chooseReceiver(_from, _data);
 
         if (isKnownToken) {
-            data = abi.encodeWithSelector(this.handleBridgedTokens.selector, _token, receiver, _value);
+            data = abi.encodeWithSelector(this.handleBridgedTokens.selector, _token, _receiver, _value);
         } else {
             // the other side bridge can be HomeMultiAMBErc20ToErc677 or Primary/Secondary HomeMultiAMBErc20ToErc677.
             // as the deployAndHandleBridgedTokens function got the same signature
@@ -146,7 +143,7 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
                 name,
                 symbol,
                 decimals,
-                receiver,
+                _receiver,
                 _value
             );
         }
@@ -166,6 +163,8 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
         if (!isKnownToken) {
             _setTokenRegistrationMessageId(_token, _messageId);
         }
+
+        emit TokensBridgingInitiated(_token, _from, _value, _messageId);
     }
 
     /**
@@ -193,8 +192,7 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     * @param _value amount of tokens to be received.
     */
     function executeActionOnFixedTokens(address _token, address _recipient, uint256 _value) internal {
-        _setMediatorBalance(_token, mediatorBalance(_token).sub(_value));
-        _token.safeTransfer(_recipient, _value);
+        _releaseTokens(_token, _recipient, _value);
     }
 
     /**
@@ -203,7 +201,11 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     * @param _token address of the token contract.
     * @param _receiver the address that will receive the tokens on the other network.
     */
-    function fixMediatorBalance(address _token, address _receiver) public onlyIfUpgradeabilityOwner {
+    function fixMediatorBalance(address _token, address _receiver)
+        external
+        onlyIfUpgradeabilityOwner
+        validAddress(_receiver)
+    {
         require(isTokenRegistered(_token));
         uint256 balance = ERC677(_token).balanceOf(address(this));
         uint256 expectedBalance = mediatorBalance(_token);
@@ -264,5 +266,33 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     */
     function _setTokenRegistrationMessageId(address _token, bytes32 _messageId) internal {
         uintStorage[keccak256(abi.encodePacked("tokenRegistrationMessageId", _token))] = uint256(_messageId);
+    }
+
+    /**
+     * Internal function for unlocking some amount of tokens.
+     * In case of bridging STAKE token, the insufficient amount of tokens can be additionally minted.
+     */
+    function _releaseTokens(address _token, address _recipient, uint256 _value) internal {
+        // It is necessary to use mediatorBalance(STAKE) instead of STAKE.balanceOf(this) to disallow user
+        // withdraw mistakenly locked funds (via regular transfer()) instead of minting new tokens.
+        // It should be possible to process mistakenly locked funds by calling fixMediatorBalance.
+        uint256 balance = mediatorBalance(_token);
+
+        // STAKE total supply on xDai can be higher than the native STAKE supply on Mainnet
+        // Omnibridge is allowed to mint extra native STAKE tokens.
+        if (_token == address(0x0Ae055097C6d159879521C384F1D2123D1f195e6) && balance < _value) {
+            // if all locked tokens were already withdrawn, mint new tokens directly to receiver
+            // mediatorBalance(STAKE) remains 0 in this case.
+            if (balance == 0) {
+                IBurnableMintableERC677Token(_token).mint(_recipient, _value);
+                return;
+            }
+
+            // otherwise, mint insufficient tokens to the contract
+            IBurnableMintableERC677Token(_token).mint(address(this), _value - balance);
+            balance = _value;
+        }
+        _token.safeTransfer(_recipient, _value);
+        _setMediatorBalance(_token, balance.sub(_value));
     }
 }

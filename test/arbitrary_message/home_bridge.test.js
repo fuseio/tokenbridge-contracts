@@ -130,6 +130,17 @@ contract('HomeAMB', async accounts => {
       await homeBridge
         .initialize(HOME_CHAIN_ID_HEX, FOREIGN_CHAIN_ID_HEX, validatorContract.address, oneEther, gasPrice, 0, owner)
         .should.be.rejectedWith(ERROR_MSG)
+      await homeBridge
+        .initialize(
+          HOME_CHAIN_ID_HEX,
+          FOREIGN_CHAIN_ID_HEX,
+          validatorContract.address,
+          oneEther,
+          0,
+          requiredBlockConfirmations,
+          ZERO_ADDRESS
+        )
+        .should.be.rejectedWith(ERROR_MSG)
       await homeBridge.initialize(
         HOME_CHAIN_ID_HEX,
         FOREIGN_CHAIN_ID_HEX,
@@ -247,7 +258,7 @@ contract('HomeAMB', async accounts => {
       expect(await proxy.upgradeabilityOwner()).to.be.equal(newOwner)
     })
   })
-  describe('requireToPassMessage', () => {
+  describe('requireToPassMessage & requireToConfirmMessage', () => {
     let homeBridge
     let bridgeId
     beforeEach(async () => {
@@ -278,7 +289,22 @@ contract('HomeAMB', async accounts => {
       )
 
       tx.receipt.logs.length.should.be.equal(1)
-      expect(tx.receipt.logs[0].args.messageId).to.include(`${bridgeId}0000000000000000`)
+      const { messageId, encodedData } = tx.receipt.logs[0].args
+      expect(messageId).to.include(`${bridgeId}0000000000000000`)
+      expect(encodedData.substr(2 + (32 + 20 + 20 + 4 + 1 + 1) * 2, 2)).to.be.equal('00')
+    })
+    it('call requireToConfirmMessage(address, bytes, uint256)', async () => {
+      const tx = await homeBridge.requireToConfirmMessage(
+        '0xf4BEF13F9f4f2B203FAF0C3cBbaAbe1afE056955',
+        '0xb1591967aed668a4b27645ff40c444892d91bf5951b382995d4d4f6ee3a2ce03',
+        1535604485,
+        { from: accounts[3] }
+      )
+
+      tx.receipt.logs.length.should.be.equal(1)
+      const { messageId, encodedData } = tx.receipt.logs[0].args
+      expect(messageId).to.include(`${bridgeId}0000000000000000`)
+      expect(encodedData.substr(2 + (32 + 20 + 20 + 4 + 1 + 1) * 2, 2)).to.be.equal('80')
     })
     it('call requireToPassMessage(address, bytes, uint256) should fail', async () => {
       // Should fail because gas < minimumGasUsage
@@ -639,6 +665,27 @@ contract('HomeAMB', async accounts => {
 
       // means that call to requireToPassMessage inside MessageProcessor reverted, since messageId flag was set up
       expect(await homeBridge.messageCallStatus(messageId)).to.be.equal(false)
+    })
+    it('should allow to pass message back through the bridge if configured', async () => {
+      const user = accounts[8]
+      await homeBridge.setAllowReentrantRequests(true, { from: user }).should.be.rejected
+      await homeBridge.setAllowReentrantRequests(true, { from: owner }).should.be.fulfilled
+      expect(await homeBridge.allowReentrantRequests()).to.be.equal(true)
+
+      const data = await homeBridge.contract.methods.requireToPassMessage(box.address, setValueData, 100000).encodeABI()
+      // Use these calls to simulate home bridge on home network
+      const resultPassMessageTx = await foreignBridge.requireToPassMessage(homeBridge.address, data, 821254, {
+        from: user
+      })
+
+      const { encodedData: message, messageId } = resultPassMessageTx.logs[0].args
+
+      await homeBridge.executeAffirmation(message, {
+        from: authorities[0],
+        gasPrice
+      }).should.be.fulfilled
+
+      expect(await homeBridge.messageCallStatus(messageId)).to.be.equal(true)
     })
   })
   describe('submitSignature', () => {

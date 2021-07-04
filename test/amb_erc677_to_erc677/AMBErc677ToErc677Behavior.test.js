@@ -144,6 +144,18 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
         owner
       ).should.be.rejected
 
+      // not valid owner
+      await contract.initialize(
+        bridgeContract.address,
+        mediatorContract.address,
+        erc677Token.address,
+        [dailyLimit, maxPerTx, minPerTx],
+        [executionDailyLimit, executionMaxPerTx],
+        maxGasPerTx,
+        decimalShiftZero,
+        ZERO_ADDRESS
+      ).should.be.rejected
+
       const { logs } = await contract.initialize(
         bridgeContract.address,
         mediatorContract.address,
@@ -379,21 +391,21 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
         1000000
       ).should.be.fulfilled
 
-      const outOfLimitEvent = await getEvents(contract, { event: 'AmountLimitExceeded' })
+      const outOfLimitEvent = await getEvents(contract, { event: 'MediatorAmountLimitExceeded' })
       expect(outOfLimitEvent.length).to.be.equal(1)
       expect(outOfLimitEvent[0].returnValues.recipient).to.be.equal(user)
       expect(outOfLimitEvent[0].returnValues.value).to.be.equal(twoEthers.toString())
-      expect(outOfLimitEvent[0].returnValues.transactionHash).to.be.equal(exampleMessageId)
+      expect(outOfLimitEvent[0].returnValues.messageId).to.be.equal(exampleMessageId)
     })
     it('Should revert if value to unlock is bigger than max per transaction', async function() {
-      await contract.fixAssetsAboveLimits(exampleMessageId, false, twoEthers).should.be.rejectedWith(ERROR_MSG)
+      await contract.fixAssetsAboveLimits(exampleMessageId, true, twoEthers).should.be.rejectedWith(ERROR_MSG)
     })
     it('Should allow to partially reduce outOfLimitAmount and not emit amb event', async function() {
       const { logs } = await contract.fixAssetsAboveLimits(exampleMessageId, false, halfEther).should.be.fulfilled
 
       logs.length.should.be.equal(1)
       expectEventInLogs(logs, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: ether('1.5')
       })
@@ -406,7 +418,7 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
 
       logsSecondTx.length.should.be.equal(1)
       expectEventInLogs(logsSecondTx, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: oneEther
       })
@@ -417,9 +429,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
     it('Should allow to partially reduce outOfLimitAmount and emit amb event', async function() {
       const { logs } = await contract.fixAssetsAboveLimits(exampleMessageId, true, halfEther).should.be.fulfilled
 
-      logs.length.should.be.equal(1)
+      logs.length.should.be.equal(2)
       expectEventInLogs(logs, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: ether('1.5')
       })
@@ -430,9 +442,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
       const { logs: logsSecondTx } = await contract.fixAssetsAboveLimits(exampleMessageId, true, halfEther).should.be
         .fulfilled
 
-      logsSecondTx.length.should.be.equal(1)
+      logsSecondTx.length.should.be.equal(2)
       expectEventInLogs(logsSecondTx, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: oneEther
       })
@@ -443,9 +455,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
     it('Should revert if try to unlock more than available', async function() {
       const { logs } = await contract.fixAssetsAboveLimits(exampleMessageId, true, halfEther).should.be.fulfilled
 
-      logs.length.should.be.equal(1)
+      logs.length.should.be.equal(2)
       expectEventInLogs(logs, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: ether('1.5')
       })
@@ -453,9 +465,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
       const { logs: logsSecondTx } = await contract.fixAssetsAboveLimits(exampleMessageId, true, halfEther).should.be
         .fulfilled
 
-      logsSecondTx.length.should.be.equal(1)
+      logsSecondTx.length.should.be.equal(2)
       expectEventInLogs(logsSecondTx, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: oneEther
       })
@@ -463,9 +475,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
       const { logs: logsThirdTx } = await contract.fixAssetsAboveLimits(exampleMessageId, true, halfEther).should.be
         .fulfilled
 
-      logsThirdTx.length.should.be.equal(1)
+      logsThirdTx.length.should.be.equal(2)
       expectEventInLogs(logsThirdTx, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: halfEther,
         remaining: halfEther
       })
@@ -475,9 +487,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
     it('Should not be allow to be called by an already fixed message', async function() {
       const { logs } = await contract.fixAssetsAboveLimits(exampleMessageId, true, oneEther).should.be.fulfilled
 
-      logs.length.should.be.equal(1)
+      logs.length.should.be.equal(2)
       expectEventInLogs(logs, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: oneEther,
         remaining: oneEther
       })
@@ -485,9 +497,9 @@ function shouldBehaveLikeBasicAMBErc677ToErc677(otherSideMediatorContract, accou
       const { logs: logsSecondTx } = await contract.fixAssetsAboveLimits(exampleMessageId, true, oneEther).should.be
         .fulfilled
 
-      logsSecondTx.length.should.be.equal(1)
+      logsSecondTx.length.should.be.equal(2)
       expectEventInLogs(logsSecondTx, 'AssetAboveLimitsFixed', {
-        transactionHash: exampleMessageId,
+        messageId: exampleMessageId,
         value: oneEther,
         remaining: ZERO
       })

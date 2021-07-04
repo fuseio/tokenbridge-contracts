@@ -43,7 +43,6 @@ contract BasicAMBNativeToErc20 is
         address _feeManager
     ) internal {
         require(!isInitialized());
-        require(_owner != address(0));
 
         _setBridgeContract(_bridgeContract);
         _setMediatorContractOnOtherSide(_mediatorContract);
@@ -52,7 +51,7 @@ contract BasicAMBNativeToErc20 is
         _setExecutionLimits(_executionDailyLimitExecutionMaxPerTxArray);
         _setDecimalShift(_decimalShift);
         _setFeeManagerContract(_feeManager);
-        setOwner(_owner);
+        _setOwner(_owner);
     }
 
     /**
@@ -62,7 +61,7 @@ contract BasicAMBNativeToErc20 is
     * @return patch value of the version
     */
     function getBridgeInterfacesVersion() external pure returns (uint64 major, uint64 minor, uint64 patch) {
-        return (1, 1, 0);
+        return (1, 2, 0);
     }
 
     /**
@@ -81,14 +80,5 @@ contract BasicAMBNativeToErc20 is
         uint256 /* _value */
     ) internal {
         revert();
-    }
-
-    /**
-    * @dev Allows to transfer any locked token on this contract that is not part of the bridge operations.
-    * @param _token address of the token, if it is not provided, native tokens will be transferred.
-    * @param _to address that will receive the locked tokens on this contract.
-    */
-    function claimTokens(address _token, address _to) public onlyIfUpgradeabilityOwner validAddress(_to) {
-        claimValues(_token, _to);
     }
 }
