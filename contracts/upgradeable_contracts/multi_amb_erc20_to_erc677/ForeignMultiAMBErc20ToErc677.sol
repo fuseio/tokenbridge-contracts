@@ -265,4 +265,19 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     function _setTokenRegistrationMessageId(address _token, bytes32 _messageId) internal {
         uintStorage[keccak256(abi.encodePacked("tokenRegistrationMessageId", _token))] = uint256(_messageId);
     }
+
+        /**
+    * @dev Allows to send to the same network the amount of locked tokens that can be forced into the contract
+    * without the invocation of the required methods. (e. g. regular transfer without a call to onTokenTransfer)
+    * @param _token address of the token contract.
+    * @param _receiver the address that will receive the tokens on the same network.
+    */
+    function fixMediatorBalanceSameNetwork(address _token, address _receiver) public onlyIfUpgradeabilityOwner {
+        require(isTokenRegistered(_token));
+        uint256 balance = ERC677(_token).balanceOf(address(this));
+        uint256 expectedBalance = mediatorBalance(_token);
+        require(balance > expectedBalance);
+        uint256 diff = balance - expectedBalance;
+        ERC677(_token).safeTransfer(_receiver, diff);
+    }
 }
