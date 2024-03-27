@@ -496,6 +496,38 @@ contract('ForeignAMBNativeToErc20', async accounts => {
       expectEventInLogs(logs, 'OwnershipTransferred', { previousOwner: owner, newOwner })
     })
   })
+
+  describe('transferTokenOwnership', () => {
+    beforeEach(async () => {
+      await contract.initialize(
+        ambBridgeContract.address,
+        otherSideMediatorContract.address,
+        [dailyLimit, maxPerTx, minPerTx],
+        [executionDailyLimit, executionMaxPerTx],
+        maxGasPerTx,
+        decimalShiftZero,
+        owner,
+        token.address,
+        ZERO_ADDRESS
+      ).should.be.fulfilled
+    })
+    it('should transfer ownership', async () => {
+      // Given
+      expect(await token.owner()).to.be.equal(owner)
+
+
+      // When
+      const newOwner = accounts[7]
+
+      await contract.transferTokenOwnership(newOwner, { from: accounts[2] }).should.be.rejectedWith(ERROR_MSG)
+      await contract.transferTokenOwnership(ZERO_ADDRESS, { from: owner }).should.be.rejectedWith(ERROR_MSG)
+      await contract.transferOwnership(newOwner, { from: owner }).should.be.fulfilled
+
+      // // Then
+      expect(await contract.owner()).to.be.equal(newOwner)
+    })
+  })
+
   describe('feeManager', () => {
     let feeManager
     beforeEach(async () => {

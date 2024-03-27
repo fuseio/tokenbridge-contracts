@@ -133,6 +133,15 @@ contract ForeignAMBNativeToErc20 is BasicAMBNativeToErc20, ReentrancyGuard, Base
         return true;
     }
 
+        /**
+    * @dev Transfer token ownership to the new owner.The metod is called by the bridge owner to deprecate the bridge.
+    * @param _owner address address of the new owner.
+    */
+    function transferTokenOwnership(address _owner) external onlyOwner {
+        IBurnableMintableERC677Token(erc677token())
+            .transferOwnership(_owner);
+    }
+
     /**
     * @dev Burns the amount of tokens and makes the request to unlock the native tokens on the other network.
     * @param _token address of the ERC677 token.
