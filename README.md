@@ -80,6 +80,9 @@ There are two ways to deploy contracts:
 ```bash
 npm install
 ```
+
+If npm install not working for you, try install with `yarn`
+
 #### Deploy
 Please read the [README.md](deploy/README.md) in the `deploy` folder for instructions and .env file configuration
 

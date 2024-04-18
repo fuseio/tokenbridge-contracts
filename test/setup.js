@@ -4,7 +4,7 @@ require('chai')
   .use(require('chai-as-promised'))
   .use(require('chai-bn')(BN))
 
-require('chai/register-should')
+require('chai').should()
 
 exports.BN = BN
 exports.toBN = web3.utils.toBN
