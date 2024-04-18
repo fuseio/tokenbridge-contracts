@@ -23,4 +23,21 @@ contract BridgedTokensMigrator is Initializable, TokensMigrationManager {
 
         return isInitialized();
     }
+
+    /**
+    * @dev Throws if called by any account other than wner.
+    */
+    modifier onlyProxy() {
+        require(msg.sender == IUpgradeabilityOwnerStorage(this).upgradeabilityOwner());
+        _;
+    }
+
+    /**
+     * @dev Allows the current owner or proxy to transfer control of the contract to a newOwner
+     * @param newOwner the address to transfer ownership to
+     */
+    function transferOwnership(address newOwner) external onlyProxy {
+        require(newOwner != address(0));
+        setOwner(newOwner);
+    }
 }
