@@ -265,4 +265,18 @@ contract ForeignMultiAMBErc20ToErc677 is BasicMultiAMBErc20ToErc677 {
     function _setTokenRegistrationMessageId(address _token, bytes32 _messageId) internal {
         uintStorage[keccak256(abi.encodePacked("tokenRegistrationMessageId", _token))] = uint256(_messageId);
     }
+
+    /**
+    * @dev Claims stucked tokens. Only unsupported tokens can be claimed.
+    * @param _token address of claimed token, address(0) for native
+    * @param _to address of tokens receiver
+    * @param _amount amount of tokens to be claimed
+    */
+    function claimTokensAmount(address _token, address _to, uint256 _amount) external onlyIfUpgradeabilityOwner validAddress(_to) {
+        require(!isTokenRegistered(_token)); // native coins or token not registered
+        require(_amount > 0);
+
+        ERC20Basic token = ERC20Basic(_token);
+        safeTransfer(_token, _to, _amount);
+    }
 }

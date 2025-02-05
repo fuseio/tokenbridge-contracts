@@ -256,6 +256,48 @@ contract('ForeignMultiAMBErc20ToErc677', async accounts => {
     })
   })
 
+  describe('claimTokensAmount', () => {
+    beforeEach(async () => {
+      const storageProxy = await EternalStorageProxy.new()
+      await storageProxy.upgradeTo('1', contract.address).should.be.fulfilled
+      contract = await ForeignMultiAMBErc20ToErc677.at(storageProxy.address)
+      await contract.initialize(
+        ambBridgeContract.address,
+        otherSideMediator.address,
+        [dailyLimit, maxPerTx, minPerTx],
+        [executionDailyLimit, executionMaxPerTx],
+        maxGasPerTx,
+        owner
+      ).should.be.fulfilled
+    })
+
+    it('should only work with unknown token', async () => {
+      await token.mint(user, oneEther).should.be.fulfilled
+      expect(await token.balanceOf(user)).to.be.bignumber.equal(oneEther)
+
+      await token.transfer(contract.address, oneEther, { from: user }).should.be.fulfilled
+      expect(await token.balanceOf(user)).to.be.bignumber.equal(ZERO)
+      expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(oneEther)
+
+      await contract.claimTokensAmount(token.address, accounts[3], oneEther, { from: user }).should.be.rejected
+      await contract.claimTokensAmount(token.address, accounts[3], oneEther, { from: owner }).should.be.rejected
+
+      token = await ERC20Mock.new('Test', 'TST', 18)
+
+      await token.mint(user, oneEther).should.be.fulfilled
+      expect(await token.balanceOf(user)).to.be.bignumber.equal(oneEther)
+
+      await token.transfer(contract.address, oneEther, { from: user }).should.be.fulfilled
+      expect(await token.balanceOf(user)).to.be.bignumber.equal(ZERO)
+      expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(oneEther)
+
+      await contract.claimTokensAmount(token.address, accounts[3], oneEther, { from: user }).should.be.rejected
+      await contract.claimTokensAmount(token.address, accounts[3], oneEther, { from: owner }).should.be.fulfilled
+      expect(await token.balanceOf(contract.address)).to.be.bignumber.equal(ZERO)
+      expect(await token.balanceOf(accounts[3])).to.be.bignumber.equal(oneEther)
+    })
+  })
+
   describe('afterInitialization', () => {
     beforeEach(async () => {
       await token.mint(user, twoEthers, { from: owner }).should.be.fulfilled
